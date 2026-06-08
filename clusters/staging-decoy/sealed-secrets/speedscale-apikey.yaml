@@ -1,0 +1,21 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: speedscale-apikey
+  namespace: speedscale
+spec:
+  encryptedData:
+    SPEEDSCALE_API_KEY: AgAiyNsZ77mrWdN7E679fmHP4gK7W2/0QnaFpbM76Onn+4w8Ch+xbaycPqEqc/r8e9+gtMt3bjuXwpIJY5aovK8SYedH1M0v0dRq7cRivwuRJX47ELBb+bVDwgG4W7cWwhYFRrQ1ZbYXbii9yKYVp6SryydyN0Ei9fwjuiqeBU18hozCQZSuYwvsitfAZ4LaYA6+APs84NMVh+zdG8w4oZMRGhxaervDw6PaoOBNLsJOb+AAszEWiF2GqXN9d9Fp2Bl55wlsVohBlOhiIyuEmyetxdgEgi2NGQP+vFCDFuYx6uqW2dP77h/qBcy0lBxyGrk2m9aBYqSH9QSr0YggOODVSSzui5PbsSZf26k4xFuZ7HGBr25d1LEB8z+r9TEMvmEZab17Em1w7TRTmTG0gErPN6rn5J5eCjeLTy64fQkFumT3UGOl41z5Fj31FiRtJ6UKowK3mU6RsGXYuimvVewmyI/p+eRmIE/UKRzWiiP4b88q+3T9qBbnSuN5nuHfvY0DmzxxgRczmF2ObJRNgNSfy98SplsRMSpy0uuZvVgelNItS+WiC3R68STYaIlBx5UP2Ki0sq7f9KZs465DhcWs7id1nqKtFl5QIOWHul+6ZlOU5gFod+bNTJR/ftmJGRq2ImIz6MGAnG8pvzSseUozUvBCpV6kYfmj+nd6Zu6wnvWP307dSdGhaLNW0tv4OEyBifLNUAMhEZtzRyzczoVTPuunK+bWBs0XobuQcEbz+l33e2bJJub9GW/PyVg=
+    SPEEDSCALE_APP_URL: AgBBHOVHHiGzFP9fkTorj3s7BFEB8wiH1W7sOuqKVI1tD8C1GJdB5zlzmvjsk/NdslZXfXwr6n4ERBRDGdepLbZW0+Je6Zxy/AYDQqqpVG07BD+uqbPSOGxCw0PHqOZkDDyDsy846CS41ukAZmpKIXVOYyWgcFCFkCSV9IjMgF7SzqCW4S0FZaMuX8wolnTa0S4NkT8QsnmHd914210OIwBCKMbgW7K1QICTYPIiM+rt9IKA2KNdQC19Y52RBXszjMv1+VZZj88/pMSvL+rz6oQsobxrhpuA3XKSgpFohBwHGvl1WNkk9WcZWSjCxMKj7hOwuOOWBxSw+mGeBAt1y7s1/9bqgTAFnzcPVE/4BGyO1Qs6FraMOqiBzIAmSJmKMYA5q1ofMA3dzmv1GLqoMsn0JRbPUnbg9rEPMRkn27QZnWWot8tIEJiWj31b+zTx40M9UtGI6RyMetivXvAROWOSJQznm5OayKrXhdXJASJERl7El1XqIg2mIxHtUUFTsvVS5hCPGJpTaBYoRdg6xPjAwABitIsV8taNIvU7rFb2fPTiGMGlLZ1yU9Yrn1sbMKt4VJhcifeHQh58WFOk/BMGJUb7R+rxmsBIPdwfbH7ikt+U/nwcd5UK1qUipszgmpE29iTZe2ccIx3840MhSf0wxgLm3HGHnpf7kXZYdfV8Px+Ez7uo7THq2ohjKN6NoenzwZh/9EH8J65E8biKdT5Y4ckC40gq
+  template:
+    metadata:
+      annotations:
+        helm.sh/hook: pre-install
+        helm.sh/hook-weight: "3"
+      labels:
+        operator.speedscale.com/managed-by: staging-decoy-0262bd07-cd66-457f-9f08-74e275fe0780
+        operator.speedscale.com/shared-inventory: "true"
+      name: speedscale-apikey
+      namespace: speedscale
+    type: Opaque

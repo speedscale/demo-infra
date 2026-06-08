@@ -1,0 +1,21 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: speedscale-apikey
+  namespace: speedscale
+spec:
+  encryptedData:
+    SPEEDSCALE_API_KEY: AgCk4ujotBHYy9/R+f1MU6pR6nPrqpuSxepbf1arnJBfnF/c2NFqjSoaw1ztQkZ9j9LQQp/wlDPzmI4oOenvlbreKMB5DJ4iBPLiq7b5tEhFgaziHYeZGJmFEFQK7ji1gvxHzL53MA/b1sISZPJuFluFQf7zz5rRHUU3f1oURFBuBdqTdm1ifjI62B9m1FyjBldhruwrkvvXyXtv8dGxuv/PU2qobO5XO8dDOftHi9GWpHgr7URVyAd1Aa+bRc+2rhULTpTB33/yEg5JZ20SFmROHvdu5G6XppTT97h/ke11n1/Yiz4BoBMnLBw7PvgFNG9fOudHrSM1MAzs2vF87Yqg4kAWoHyyn0kuIrp68XVFMjk/pdxjTohFHg+pOT8GaNLXtvWg2LFb4ky/czVGAsK6XL5Po3O0xtVNMsKDAsIDsC9K9+ihfn4Fm3zh6y9XWLRptlc67dYB64K0zaDw+aWclE48Y3YKrHtsxajQ2PZfzSC9VKULB9PwoM7VgfmjrE/Na7Pe9anOyxT0Wc7O22hSOPo9Hsj2rDIvDx6Op4YxTlwBcP2I7YUY4lOT6MusHqVlAku58rm20ulRdmhDBmuvrTVHYRpwRiP+P/pvuch/Ro7rQXjAmTWftfuOEEjIScBsg1USTPRRDNrNhUBVRL1kKh521QLO6Q9k10Qdn6xEumSdQZaVY/VTv66N9qJNEn4FUK9CEFPiUsf5z+jaNn5sMPbrMTGk/gK9ctHttx26H403R8uH0z6mOLy6qSk=
+    SPEEDSCALE_APP_URL: AgBKWwvFkoHsOw0Cpc9rTy4gVaNgUbc4n6S6lUsNjzhWc1BdJPzlDj/8ruEyHq1oNd4QeUVrCXm/Nbn2M8cwtx9fSJCUJxopAxNMNfsFagkT2GFpWx1J/V3Mdi/Y1+3VoIf4qq8k52V3k9FFYXQZ7XXr02QAGEP1lNX5dy70BA0l2i1CG96kGeeqMOChf+wkUgqRWFUXJS+TWVaHTT6xcARy/WLeKCwbkEeJIZQ7IhtaTGJHFqrTVTZV7mnKGqEr27xtuGg8txHdHqZJbPy4UsTjMXOHHGRHlQme3o4xvGsZYwEjRk2zUibgO7qQonKT10IJUZzG/8J3GBOszWOPxRnqzMoctq7X9iVTfm97ZE+gLqEDe6/hEkceB9HWmxQcTx1yB5kAmZ7+Ryow4m7uSHSwyfxBw/v9aSmfC/gSCx2WpZrDAv1zmxRVXKz8WGEqidVh5k457vePJnfN6IZL2ohrZniB2dhAQJ2A3UrjD/gKOnGAXQ01Bl/xWhe1nB8J+Ed3deBW4SaU+8BlZIaBucgyWz2EJeeSfwA3UqCnCr45t/ARiioSYElUPK1j0osq+plh8hoLSKAZK+6aYpjEfQSYhIkxjrAvnq3T8l/AzCVc7+Gj19iO76nDbZW1D9UivF0tElS5W6gGP6ncbaaERKQt0cJl1UcErGTS2enlTzSbcCY3Frqqcb88LFHra5ab4dlwIeXsdz92RvB2e6BbSYThK8A=
+  template:
+    metadata:
+      annotations:
+        helm.sh/hook: pre-install
+        helm.sh/hook-weight: "3"
+      labels:
+        operator.speedscale.com/managed-by: dev-decoy-3b34aae8-2a06-4690-8fe8-f1c49e8ad64d
+        operator.speedscale.com/shared-inventory: "true"
+      name: speedscale-apikey
+      namespace: speedscale
+    type: Opaque
