@@ -28,6 +28,12 @@ jobs:
     - name: Apply ArgoCD Applications
       run: kubectl apply -f clusters/${{ matrix.cluster }}/argocd/
 
+    - name: Apply Istio config
+      run: |
+        if [ -d "clusters/${{ matrix.cluster }}/istio-config" ]; then
+          kubectl apply -f clusters/${{ matrix.cluster }}/istio-config/
+        fi
+
     - name: Verify sync started
       run: |
         sleep 10

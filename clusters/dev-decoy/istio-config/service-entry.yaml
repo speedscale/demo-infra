@@ -1,0 +1,31 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: speedscale-external-svc-https
+  namespace: istio-system
+spec:
+  hosts:
+  - "*.speedscale.com"
+  - firehose.us-east-1.amazonaws.com
+  - sns.us-east-1.amazonaws.com
+  - sqs.us-east-1.amazonaws.com
+  - queue.amazonaws.com
+  - "*.s3.amazonaws.com"
+  - "*.s3.us-east-1.amazonaws.com"
+  - s3.amazonaws.com
+  - s3.us-east-1.amazonaws.com
+  - sts.amazonaws.com
+  - sts.us-east-1.amazonaws.com
+  - gcr.io
+  - storage.googleapis.com
+  - "*.docker.io"
+  - "*.docker.com"
+  - monitoring.us-east-1.amazonaws.com
+  exportTo:
+  - "*"
+  location: MESH_EXTERNAL
+  ports:
+  - name: https
+    number: 443
+    protocol: TLS
+  resolution: NONE
