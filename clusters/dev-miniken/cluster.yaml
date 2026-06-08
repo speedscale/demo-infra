@@ -1,0 +1,4 @@
+name: dev-miniken
+provider: minikube
+context: dev-miniken
+speedctl_config_secret: SPEEDCTL_DEV_CONFIG

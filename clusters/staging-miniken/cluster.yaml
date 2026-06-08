@@ -1,0 +1,4 @@
+name: staging-miniken
+provider: minikube
+context: staging-miniken
+speedctl_config_secret: SPEEDCTL_STAGING_CONFIG
