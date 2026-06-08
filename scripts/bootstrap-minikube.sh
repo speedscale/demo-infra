@@ -31,7 +31,7 @@ if minikube status -p "$PROFILE" &>/dev/null; then
 else
   minikube start -p "$PROFILE" \
     --cpus=4 \
-    --memory=8192 \
+    --memory=6144 \
     --driver=docker \
     --kubernetes-version=stable
 fi
@@ -49,6 +49,13 @@ echo "=== Installing ArgoCD ==="
 echo ""
 echo "=== Applying ArgoCD Application manifests ==="
 kubectl apply -f "$CLUSTER_DIR/argocd/"
+
+echo ""
+echo "=== Waiting for ArgoCD to create namespaces ==="
+echo "Waiting for istio-system namespace..."
+until kubectl get ns istio-system &>/dev/null; do sleep 5; done
+echo "Waiting for banking-app namespace..."
+until kubectl get ns banking-app &>/dev/null; do sleep 5; done
 
 echo ""
 echo "=== Applying Gateway API resources ==="
