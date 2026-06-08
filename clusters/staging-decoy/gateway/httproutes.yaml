@@ -5,11 +5,10 @@ metadata:
   namespace: banking-app
 spec:
   parentRefs:
-  - name: demo-gateway
+  - name: apex-gateway
     namespace: istio-system
   hostnames:
-  - banking-dev.trafficreplay.com
-  - apex-banking.trafficreplay.com
+  - apex-banking-staging.trafficreplay.com
   rules:
   - matches:
     - path:
@@ -26,10 +25,10 @@ metadata:
   namespace: banking-app
 spec:
   parentRefs:
-  - name: demo-gateway
+  - name: apex-gateway
     namespace: istio-system
   hostnames:
-  - apex-grafana.trafficreplay.com
+  - apex-grafana-staging.trafficreplay.com
   rules:
   - matches:
     - path:
@@ -46,10 +45,10 @@ metadata:
   namespace: banking-app
 spec:
   parentRefs:
-  - name: demo-gateway
+  - name: apex-gateway
     namespace: istio-system
   hostnames:
-  - apex-jaeger.trafficreplay.com
+  - apex-jaeger-staging.trafficreplay.com
   rules:
   - matches:
     - path:
