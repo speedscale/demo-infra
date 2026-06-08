@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: byoc-fluentbit-s3-staging-decoy
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/speedscale/speedscale-byoc
+    targetRevision: main
+    path: charts/fluentbit-s3
+    helm:
+      values: |
+        s3:
+          bucket: speedscale-rrpair-demo-s3
+          region: us-east-1
+          credentialsSecret: byoc-fluentbit-s3
+        irsa:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: byoc-fluentbit-s3
+  syncPolicy:
+    syncOptions:
+    - CreateNamespace=true
