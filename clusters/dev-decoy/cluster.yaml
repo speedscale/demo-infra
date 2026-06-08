@@ -1,5 +1,5 @@
 name: dev-decoy
 provider: digitalocean
-region: sfo3
-context: do-sfo3-dev-decoy
+region: nyc1
+context: do-nyc1-dev-decoy
 speedctl_config_secret: SPEEDCTL_DEV_CONFIG
