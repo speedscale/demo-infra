@@ -47,6 +47,14 @@ if [ -d "$SEALED_DIR" ]; then
   kubectl apply -f "$SEALED_DIR/"
 fi
 
+# Apply Gateway API resources (Gateway, HTTPRoutes) if present
+GATEWAY_DIR="$CLUSTER_DIR/gateway"
+if [ -d "$GATEWAY_DIR" ]; then
+  echo ""
+  echo "Applying Gateway API manifests..."
+  kubectl apply -f "$GATEWAY_DIR/"
+fi
+
 # Apply Istio config (ServiceEntry, Telemetry) if present
 ISTIO_CONFIG_DIR="$CLUSTER_DIR/istio-config"
 if [ -d "$ISTIO_CONFIG_DIR" ]; then
