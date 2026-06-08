@@ -28,6 +28,18 @@ jobs:
     - name: Apply ArgoCD Applications
       run: kubectl apply -f clusters/${{ matrix.cluster }}/argocd/
 
+    - name: Apply SealedSecrets
+      run: |
+        if [ -d "clusters/${{ matrix.cluster }}/sealed-secrets" ]; then
+          kubectl apply -f clusters/${{ matrix.cluster }}/sealed-secrets/
+        fi
+
+    - name: Apply Gateway API resources
+      run: |
+        if [ -d "clusters/${{ matrix.cluster }}/gateway" ]; then
+          kubectl apply -f clusters/${{ matrix.cluster }}/gateway/
+        fi
+
     - name: Apply Istio config
       run: |
         if [ -d "clusters/${{ matrix.cluster }}/istio-config" ]; then

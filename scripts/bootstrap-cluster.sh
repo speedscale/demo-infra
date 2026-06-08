@@ -39,6 +39,22 @@ echo ""
 echo "Applying ArgoCD Application manifests..."
 kubectl apply -f "$ARGOCD_DIR/"
 
+# Apply SealedSecrets (must come after sealed-secrets controller is synced)
+SEALED_DIR="$CLUSTER_DIR/sealed-secrets"
+if [ -d "$SEALED_DIR" ]; then
+  echo ""
+  echo "Applying SealedSecret manifests..."
+  kubectl apply -f "$SEALED_DIR/"
+fi
+
+# Apply Gateway API resources (Gateway, HTTPRoutes) if present
+GATEWAY_DIR="$CLUSTER_DIR/gateway"
+if [ -d "$GATEWAY_DIR" ]; then
+  echo ""
+  echo "Applying Gateway API manifests..."
+  kubectl apply -f "$GATEWAY_DIR/"
+fi
+
 # Apply Istio config (ServiceEntry, Telemetry) if present
 ISTIO_CONFIG_DIR="$CLUSTER_DIR/istio-config"
 if [ -d "$ISTIO_CONFIG_DIR" ]; then

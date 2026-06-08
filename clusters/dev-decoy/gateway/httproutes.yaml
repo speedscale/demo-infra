@@ -1,0 +1,60 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: banking-frontend
+  namespace: banking-app
+spec:
+  parentRefs:
+  - name: demo-gateway
+    namespace: istio-system
+  hostnames:
+  - banking-dev.trafficreplay.com
+  - apex-banking.trafficreplay.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: banking-frontend
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana
+  namespace: banking-app
+spec:
+  parentRefs:
+  - name: demo-gateway
+    namespace: istio-system
+  hostnames:
+  - apex-grafana.trafficreplay.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: grafana
+      port: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: jaeger
+  namespace: banking-app
+spec:
+  parentRefs:
+  - name: demo-gateway
+    namespace: istio-system
+  hostnames:
+  - apex-jaeger.trafficreplay.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: jaeger
+      port: 16686
