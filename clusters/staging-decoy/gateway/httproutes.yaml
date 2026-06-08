@@ -8,8 +8,8 @@ spec:
   - name: demo-gateway
     namespace: istio-system
   hostnames:
-  - banking-dev.trafficreplay.com
-  - apex-banking.trafficreplay.com
+  - banking-staging.trafficreplay.com
+  - staging-banking.trafficreplay.com
   rules:
   - matches:
     - path:
@@ -29,7 +29,7 @@ spec:
   - name: demo-gateway
     namespace: istio-system
   hostnames:
-  - apex-grafana.trafficreplay.com
+  - staging-grafana.trafficreplay.com
   rules:
   - matches:
     - path:
@@ -49,7 +49,7 @@ spec:
   - name: demo-gateway
     namespace: istio-system
   hostnames:
-  - apex-jaeger.trafficreplay.com
+  - staging-jaeger.trafficreplay.com
   rules:
   - matches:
     - path:
