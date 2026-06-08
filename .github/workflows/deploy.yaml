@@ -1,0 +1,40 @@
+name: Deploy ArgoCD Applications
+
+on:
+  push:
+    branches: [main]
+    paths:
+    - 'clusters/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cluster: [dev-decoy, staging-decoy]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+    - name: Connect to cluster
+      run: doctl kubernetes cluster kubeconfig save ${{ matrix.cluster }}
+
+    - name: Apply ArgoCD Applications
+      run: kubectl apply -f clusters/${{ matrix.cluster }}/argocd/
+
+    - name: Verify sync started
+      run: |
+        sleep 10
+        kubectl get applications -n argocd \
+          -o custom-columns=NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status
+
+  trigger-quality:
+    needs: deploy
+    uses: ./.github/workflows/quality-post-deploy.yaml
+    secrets: inherit

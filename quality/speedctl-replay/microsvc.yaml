@@ -1,0 +1,6 @@
+# TODO: replace snapshotID and testConfigID with real values from the target cluster
+name: microsvc
+workload: microsvc
+namespace: banking-app
+snapshotID: REPLACE_ME
+testConfigID: standard

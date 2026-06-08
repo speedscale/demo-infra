@@ -1,0 +1,5 @@
+name: staging-decoy
+provider: digitalocean
+region: sfo3
+context: do-sfo3-staging-decoy
+speedctl_config_secret: SPEEDCTL_STAGING_CONFIG

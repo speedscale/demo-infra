@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: speedscale-operator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://speedscale.github.io/operator-helm/
+    chart: speedscale-operator
+    targetRevision: "*"
+    helm:
+      # API key and sensitive values are stored in the speedscale namespace
+      # as Kubernetes Secrets, not in this repo. The operator chart reads
+      # its API key from the pre-existing secret/speedscale when
+      # existingSecret is set.
+      values: |
+        existingSecret: speedscale
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: speedscale
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

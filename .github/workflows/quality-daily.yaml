@@ -1,0 +1,56 @@
+name: Daily Quality Replays
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 6am UTC daily
+  workflow_dispatch:
+    inputs:
+      cluster:
+        description: 'Cluster to replay (or "all")'
+        default: 'all'
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cluster: [dev-decoy, staging-decoy]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+    - name: Install speedctl
+      run: |
+        curl -sL https://downloads.speedscale.com/speedctl/install | bash
+        echo "$HOME/.speedscale" >> $GITHUB_PATH
+
+    - name: Configure speedctl
+      env:
+        SPEEDCTL_DEV_CONFIG: ${{ secrets.SPEEDCTL_DEV_CONFIG }}
+        SPEEDCTL_STAGING_CONFIG: ${{ secrets.SPEEDCTL_STAGING_CONFIG }}
+      run: |
+        mkdir -p "$HOME/.speedscale"
+        CLUSTER="${{ matrix.cluster }}"
+        if [[ "$CLUSTER" == "dev-decoy" ]]; then
+          echo "$SPEEDCTL_DEV_CONFIG" > "$HOME/.speedscale/config.yaml"
+        elif [[ "$CLUSTER" == "staging-decoy" ]]; then
+          echo "$SPEEDCTL_STAGING_CONFIG" > "$HOME/.speedscale/config.yaml"
+        fi
+
+    - name: Skip if filtered
+      if: github.event.inputs.cluster != '' && github.event.inputs.cluster != 'all' && github.event.inputs.cluster != matrix.cluster
+      run: echo "Skipping ${{ matrix.cluster }} (filtered to ${{ github.event.inputs.cluster }})" && exit 0
+
+    - name: Run replays
+      env:
+        SPEEDCTL_HOME: ${{ runner.temp }}/speedctl
+      run: |
+        mkdir -p "$SPEEDCTL_HOME"
+        cp "$HOME/.speedscale/config.yaml" "$SPEEDCTL_HOME/config.yaml"
+        ./quality/scripts/run-replay.sh ${{ matrix.cluster }}

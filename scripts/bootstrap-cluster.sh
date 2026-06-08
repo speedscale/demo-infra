@@ -1,0 +1,45 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+CLUSTER_NAME=${1:-}
+
+if [ -z "$CLUSTER_NAME" ]; then
+  echo "Usage: $0 <cluster-name>"
+  echo ""
+  echo "Available clusters:"
+  ls "$REPO_ROOT/clusters/"
+  exit 1
+fi
+
+CLUSTER_DIR="$REPO_ROOT/clusters/$CLUSTER_NAME"
+if [ ! -d "$CLUSTER_DIR" ]; then
+  echo "Error: cluster '$CLUSTER_NAME' not found in clusters/"
+  exit 1
+fi
+
+ARGOCD_DIR="$CLUSTER_DIR/argocd"
+if [ ! -d "$ARGOCD_DIR" ]; then
+  echo "Error: no argocd/ directory in $CLUSTER_DIR"
+  exit 1
+fi
+
+echo "Bootstrapping cluster: $CLUSTER_NAME"
+
+# Connect to the cluster
+"$REPO_ROOT/quality/scripts/connect-cluster.sh" "$CLUSTER_NAME"
+
+# Install ArgoCD
+"$SCRIPT_DIR/install-argocd.sh" "$CLUSTER_NAME"
+
+# Apply all ArgoCD Application manifests
+echo ""
+echo "Applying ArgoCD Application manifests..."
+kubectl apply -f "$ARGOCD_DIR/"
+
+echo ""
+echo "Bootstrap complete for $CLUSTER_NAME"
+echo "ArgoCD will now sync the following apps:"
+kubectl get applications -n argocd -o custom-columns=NAME:.metadata.name,STATUS:.status.sync.status,HEALTH:.status.health.status
