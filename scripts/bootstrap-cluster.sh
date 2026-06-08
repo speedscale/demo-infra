@@ -39,6 +39,14 @@ echo ""
 echo "Applying ArgoCD Application manifests..."
 kubectl apply -f "$ARGOCD_DIR/"
 
+# Apply Istio config (ServiceEntry, Telemetry) if present
+ISTIO_CONFIG_DIR="$CLUSTER_DIR/istio-config"
+if [ -d "$ISTIO_CONFIG_DIR" ]; then
+  echo ""
+  echo "Applying Istio config manifests..."
+  kubectl apply -f "$ISTIO_CONFIG_DIR/"
+fi
+
 echo ""
 echo "Bootstrap complete for $CLUSTER_NAME"
 echo "ArgoCD will now sync the following apps:"
