@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/speedscale/microsvc
-    targetRevision: main
+    targetRevision: HEAD
     path: kubernetes/overlays/speedscale
   destination:
     server: https://kubernetes.default.svc

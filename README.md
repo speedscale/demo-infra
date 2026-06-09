@@ -6,8 +6,8 @@ Cluster management, ArgoCD GitOps, and quality jobs for Speedscale demo clusters
 
 | Cluster | Provider | Apps |
 |---------|----------|------|
-| dev-decoy | DigitalOcean | outerspace-go, microsvc, speedscale-operator |
-| staging-decoy | DigitalOcean | outerspace-go, microsvc, speedscale-operator |
+| dev-decoy | DigitalOcean | microsvc, speedscale-operator |
+| staging-decoy | DigitalOcean | microsvc, speedscale-operator |
 
 ## Quick Start
 
@@ -27,7 +27,7 @@ This installs ArgoCD and applies all Application manifests for the cluster.
 
 ## How It Works
 
-- **ArgoCD** manages app deployments (outerspace-go, microsvc, speedscale-operator) via GitOps
+- **ArgoCD** manages app deployments (microsvc, speedscale-operator) via GitOps
 - **GitHub Actions** applies ArgoCD manifests on push to main and runs daily quality replays
 - **Quality jobs** use `speedctl infra replay` to validate demo apps against known snapshots
 
