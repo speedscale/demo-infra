@@ -1,27 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: byoc-s3-dev-decoy
+  name: byoc-grafana-staging-decoy
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/speedscale/speedscale-byoc
     targetRevision: main
-    path: charts/fluentbit-s3
-    helm:
-      values: |
-        s3:
-          bucket: do-nyc1-dev-decoy-byoc
-          region: nyc3
-          endpoint: https://nyc3.digitaloceanspaces.com
-          forcePathStyle: true
-          credentialsSecret: byoc-s3
-        irsa:
-          enabled: false
+    path: charts/grafana
   destination:
     server: https://kubernetes.default.svc
-    namespace: byoc-s3
+    namespace: byoc-grafana
   syncPolicy:
     automated:
       selfHeal: true

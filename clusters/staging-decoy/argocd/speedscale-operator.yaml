@@ -25,26 +25,14 @@ spec:
               dlp_config_id: standard
               filter_rule: standard
               otel_endpoint: http://agent-factory-intake-api.agent-factory.svc.cluster.local:4317
-            byoc_azure:
-              dlp_config_id: standard
-              filter_rule: standard
-              otel_endpoint: http://otel-collector.byoc-azureblob.svc.cluster.local:4317
-            byoc_es:
-              dlp_config_id: standard
-              filter_rule: standard
-              otel_endpoint: http://otel-collector.byoc-elasticsearch.svc.cluster.local:4317
-            byoc_gcs:
-              dlp_config_id: standard
-              filter_rule: standard
-              otel_endpoint: http://otel-collector.byoc-fluentbit.svc.cluster.local:4317
             byoc_grafana:
               dlp_config_id: standard
               filter_rule: standard
-              otel_endpoint: http://otel-collector.observability:4317
+              otel_endpoint: http://otel-collector.byoc-grafana.svc.cluster.local:4317
             byoc_s3:
               dlp_config_id: standard
               filter_rule: standard
-              otel_endpoint: http://otel-collector.byoc-fluentbit-s3.svc.cluster.local:4317
+              otel_endpoint: http://otel-collector.byoc-s3.svc.cluster.local:4317
           resources:
             limits:
               cpu: "2"

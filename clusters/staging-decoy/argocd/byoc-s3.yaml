@@ -23,5 +23,7 @@ spec:
     server: https://kubernetes.default.svc
     namespace: byoc-s3
   syncPolicy:
+    automated:
+      selfHeal: true
     syncOptions:
     - CreateNamespace=true
