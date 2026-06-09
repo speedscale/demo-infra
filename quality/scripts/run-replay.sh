@@ -12,7 +12,7 @@ if [ -z "$CLUSTER_NAME" ]; then
   echo ""
   echo "Examples:"
   echo "  $0 dev-decoy              # run all replays"
-  echo "  $0 dev-decoy outerspace-go # run one replay"
+  echo "  $0 dev-decoy microsvc      # run one replay"
   exit 1
 fi
 
