@@ -13,7 +13,7 @@ spec:
       values: |
         sizing: small
         image:
-          tag: v0.1.80
+          tag: v0.1.83
         engine:
           kind: claude-sdk
           model: claude-opus-4-7
@@ -24,8 +24,11 @@ spec:
           backend: local
           path: /var/lib/agent-factory/archive
         intakeApi:
+          replicas: 1
           otlp:
             enabled: true
+        worker:
+          replicas: 1
   destination:
     server: https://kubernetes.default.svc
     namespace: agent-factory
