@@ -12,6 +12,10 @@ spec:
     helm:
       values: |
         sizing: small
+        # No PVC: pods use emptyDir. Avoids the RWO block-storage volume that
+        # can't be shared across intake-api/worker or survive a rolling update.
+        persistence:
+          enabled: false
         image:
           tag: v0.1.83
         engine:
