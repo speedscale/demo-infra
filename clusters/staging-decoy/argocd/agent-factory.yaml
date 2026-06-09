@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: agent-factory-staging-decoy
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/speedscale/agent-factory
+    targetRevision: main
+    path: charts/agent-factory
+    helm:
+      values: |
+        sizing: small
+        engine:
+          kind: claude-sdk
+          model: claude-opus-4-7
+          authSecret:
+            name: anthropic-api-key
+            key: token
+        archive:
+          backend: local
+          path: /var/lib/agent-factory/archive
+        intakeApi:
+          otlp:
+            enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: agent-factory
+  syncPolicy:
+    automated:
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
