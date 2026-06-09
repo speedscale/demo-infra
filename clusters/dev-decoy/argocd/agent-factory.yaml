@@ -31,6 +31,11 @@ spec:
           replicas: 1
           otlp:
             enabled: true
+            archive:
+              bucket: do-nyc1-dev-decoy-agent-factory
+              endpoint: https://nyc3.digitaloceanspaces.com
+              region: us-east-1
+              secretName: agent-factory-archive-s3   # keys: access-key-id, secret-access-key
         worker:
           replicas: 1
   destination:
