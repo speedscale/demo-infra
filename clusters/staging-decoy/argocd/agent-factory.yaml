@@ -27,8 +27,18 @@ spec:
         archive:
           backend: local
           path: /var/lib/agent-factory/archive
+        linear:
+          authSecret:
+            name: linear-api-key   # pre-existing in-cluster secret, key: token
+            key: token
         intakeApi:
           replicas: 1
+          # The OTLP receiver buffers up to 8 services × 10k RRPairs per 60s
+          # window; the chart-default 512Mi limit OOM-killed the pod (exit
+          # 137, 21 restarts). Give it headroom.
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:   { cpu: "1",  memory: 1Gi }
           otlp:
             enabled: true
             archive:
@@ -37,7 +47,17 @@ spec:
               region: us-east-1
               secretName: agent-factory-archive-s3   # keys: access-key-id, secret-access-key
         worker:
+          # Run the worker inside the intake-api pod (shared emptyDir). With
+          # persistence off, separate pods can't see each other's queued runs,
+          # so the reproduce handoff only works colocated. Requires chart
+          # support from agent-factory#116.
+          colocated: true
           replicas: 1
+          reproduce:
+            # No replayTarget yet: reproduce runs confirm via capture
+            # re-analysis of the archived evidence (still files tickets).
+            # Linear team "Speedscale" — auto-filed tickets titled "[auto] …".
+            linearTeamId: 2828a19c-1d7c-4f87-b477-1d15d426effd
   destination:
     server: https://kubernetes.default.svc
     namespace: agent-factory
