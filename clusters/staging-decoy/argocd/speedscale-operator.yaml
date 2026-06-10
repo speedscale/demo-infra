@@ -19,6 +19,9 @@ spec:
           enabled: true
         ebpf:
           enabled: true
+          configuration:
+            telemetry:
+              enabled: true
         forwarder:
           exporters:
             agent_factory:
