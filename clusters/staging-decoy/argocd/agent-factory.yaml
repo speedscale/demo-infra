@@ -16,12 +16,10 @@ spec:
         # can't be shared across intake-api/worker or survive a rolling update.
         persistence:
           enabled: false
-        image:
-          # v0.1.90: {service} replay templating (agent-factory#117) +
-          # reproduce re-file cooldown (#118). CI's Publish Image job tags
-          # from the pre-bump package.json, so the #118 merge shipped as
-          # v0.1.90 (image sha 25334d3); v0.1.91 was never published.
-          tag: v0.1.90
+        # image.tag intentionally unset: it defaults to the chart appVersion.
+        # Safe since agent-factory#119 — CI publishes the image (bare and
+        # v-prefixed tags) to ghcr *before* committing the version bump, so
+        # the appVersion tag always exists by the time ArgoCD syncs it.
         engine:
           kind: claude-sdk
           model: claude-opus-4-7
