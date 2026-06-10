@@ -17,9 +17,11 @@ spec:
         persistence:
           enabled: false
         image:
-          # v0.1.91: {service} replay templating (agent-factory#117) +
-          # reproduce re-file cooldown (#118)
-          tag: v0.1.91
+          # v0.1.90: {service} replay templating (agent-factory#117) +
+          # reproduce re-file cooldown (#118). CI's Publish Image job tags
+          # from the pre-bump package.json, so the #118 merge shipped as
+          # v0.1.90 (image sha 25334d3); v0.1.91 was never published.
+          tag: v0.1.90
         engine:
           kind: claude-sdk
           model: claude-opus-4-7
