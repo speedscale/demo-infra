@@ -25,15 +25,15 @@ spec:
         forwarder:
           exporters:
             agent_factory:
-              dlp_config_id: standard
+              dlp_config_id: banking-app-keys
               filter_rule: standard
               otel_endpoint: http://agent-factory-dev-decoy-intake-api.agent-factory.svc.cluster.local:4317
             byoc_grafana:
-              dlp_config_id: standard
+              dlp_config_id: banking-app-keys
               filter_rule: standard
               otel_endpoint: http://otel-collector.observability.svc.cluster.local:4317
             byoc_s3:
-              dlp_config_id: standard
+              dlp_config_id: banking-app-keys
               filter_rule: standard
               otel_endpoint: http://otel-collector.byoc-s3.svc.cluster.local:4317
           resources:
