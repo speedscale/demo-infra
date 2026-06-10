@@ -17,11 +17,10 @@ spec:
         persistence:
           enabled: false
         image:
-          # v0.1.90: {service} replay templating (agent-factory#117) +
-          # reproduce re-file cooldown (#118). CI's Publish Image job tags
-          # from the pre-bump package.json, so the #118 merge shipped as
-          # v0.1.90 (image sha 25334d3); v0.1.91 was never published.
-          tag: v0.1.90
+          # v0.1.94: generic-llm auth/endpoint wiring (agent-factory#121) +
+          # proxymock replay flag fix (#123). v0.1.91 was never published —
+          # don't pin it.
+          tag: v0.1.94
         engine:
           # gpt-5.4-mini over the OpenAI API. Anthropic spend is paused
           # (the anthropic-api-key secret holds a knowingly-invalid key);
