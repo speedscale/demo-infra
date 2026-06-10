@@ -23,10 +23,17 @@ spec:
           # v0.1.90 (image sha 25334d3); v0.1.91 was never published.
           tag: v0.1.90
         engine:
-          kind: claude-sdk
-          model: claude-opus-4-7
+          # gpt-5.4-mini over the OpenAI API. Anthropic spend is paused
+          # (the anthropic-api-key secret holds a knowingly-invalid key);
+          # mini is ~$5-25/mo at this cluster's run volume and benches
+          # near-flagship on tool calling. generic-llm auth + endpoint
+          # wiring needs agent-factory#121 — do not flip kind before the
+          # image tag above includes it.
+          kind: generic-llm
+          model: gpt-5.4-mini
+          endpoint: https://api.openai.com/v1
           authSecret:
-            name: anthropic-api-key
+            name: openai-api-key   # key: token — created out-of-band, see PR
             key: token
         archive:
           backend: local
