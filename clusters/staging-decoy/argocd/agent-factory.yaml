@@ -17,7 +17,9 @@ spec:
         persistence:
           enabled: false
         image:
-          tag: v0.1.83
+          # v0.1.91: {service} replay templating (agent-factory#117) +
+          # reproduce re-file cooldown (#118)
+          tag: v0.1.91
         engine:
           kind: claude-sdk
           model: claude-opus-4-7
@@ -54,8 +56,10 @@ spec:
           colocated: true
           replicas: 1
           reproduce:
-            # No replayTarget yet: reproduce runs confirm via capture
-            # re-analysis of the archived evidence (still files tickets).
+            # Live replay: {service} expands to the signal's service, so each
+            # reproduce run replays its archived failing traffic against the
+            # service that emitted it (banking demo apps live in banking-app).
+            replayTarget: "http://{service}.banking-app.svc.cluster.local"
             # Linear team "Speedscale" — auto-filed tickets titled "[auto] …".
             linearTeamId: 2828a19c-1d7c-4f87-b477-1d15d426effd
   destination:
