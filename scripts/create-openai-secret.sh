@@ -47,12 +47,14 @@ if [ -z "$OPENAI_KEY" ]; then
   exit 1
 fi
 
-echo "Validating key against api.openai.com (1-token call to $MODEL)..."
+# Auth check via a zero-cost metadata GET: 200 proves the key is valid AND
+# the account can see $MODEL; 401/403 = bad key. A generative test call
+# doesn't work here — reasoning models burn a tiny max_completion_tokens
+# budget on reasoning and return 400 even with a valid key.
+echo "Validating key against api.openai.com (GET /v1/models/$MODEL)..."
 HTTP_CODE=$(curl -s -o /tmp/openai-key-check.json -w '%{http_code}' \
-  https://api.openai.com/v1/chat/completions \
-  -H "Authorization: Bearer $OPENAI_KEY" \
-  -H "Content-Type: application/json" \
-  -d "{\"model\":\"$MODEL\",\"max_completion_tokens\":1,\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}")
+  "https://api.openai.com/v1/models/$MODEL" \
+  -H "Authorization: Bearer $OPENAI_KEY")
 if [ "$HTTP_CODE" != "200" ]; then
   echo "Key validation FAILED (HTTP $HTTP_CODE):"
   cat /tmp/openai-key-check.json
