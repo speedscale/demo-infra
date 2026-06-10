@@ -31,7 +31,15 @@ jobs:
     - name: Apply SealedSecrets
       run: |
         if [ -d "clusters/${{ matrix.cluster }}/sealed-secrets" ]; then
-          kubectl apply -f clusters/${{ matrix.cluster }}/sealed-secrets/
+          for f in clusters/${{ matrix.cluster }}/sealed-secrets/*.yaml; do
+            ns=$(grep 'namespace:' "$f" | head -1 | awk '{print $2}')
+            if kubectl get namespace "$ns" &>/dev/null; then
+              echo "Applying $f"
+              kubectl apply -f "$f"
+            else
+              echo "Skipping $f: namespace $ns does not exist"
+            fi
+          done
         fi
 
     - name: Apply Gateway API resources
