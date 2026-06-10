@@ -40,6 +40,13 @@ spec:
           authSecret:
             name: linear-api-key   # pre-existing in-cluster secret, key: token
             key: token
+        speedscale:
+          # proxymock init auth for the reproduce worker's live replay
+          # (agent-factory#126). Secret pre-exists in the namespace.
+          authSecret:
+            name: speedscale-api-key
+            key: token
+          appUrl: staging.speedscale.com
         intakeApi:
           replicas: 1
           # The OTLP receiver buffers up to 8 services × 10k RRPairs per 60s
