@@ -68,5 +68,9 @@ spec:
   syncPolicy:
     automated:
       selfHeal: true
+      # Prune resources the chart no longer renders. Without this the
+      # standalone worker Deployment (replaced by worker.colocated) was
+      # orphaned at v0.1.83 and kept the app permanently OutOfSync.
+      prune: true
     syncOptions:
     - CreateNamespace=true
