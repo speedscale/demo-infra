@@ -15,7 +15,7 @@ spec:
         appUrl: dev.speedscale.com
         clusterName: dev-decoy
         dlp:
-          config: decoy-email-2
+          config: banking-app-keys
           enabled: true
         ebpf:
           enabled: true
