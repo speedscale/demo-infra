@@ -21,10 +21,17 @@ spec:
         # v-prefixed tags) to ghcr *before* committing the version bump, so
         # the appVersion tag always exists by the time ArgoCD syncs it.
         engine:
-          kind: claude-sdk
-          model: claude-opus-4-7
+          # gpt-5.4-mini over the OpenAI API. Anthropic spend is paused
+          # (the anthropic-api-key secret holds a knowingly-invalid key);
+          # mini is ~$5-25/mo at this cluster's run volume and benches
+          # near-flagship on tool calling. Requires agent-factory >= v0.1.94
+          # (generic-llm auth/endpoint wiring, agent-factory#121) — satisfied
+          # since image.tag tracks chart appVersion.
+          kind: generic-llm
+          model: gpt-5.4-mini
+          endpoint: https://api.openai.com/v1
           authSecret:
-            name: anthropic-api-key
+            name: openai-api-key   # key: token — scripts/create-openai-secret.sh
             key: token
         archive:
           backend: local
