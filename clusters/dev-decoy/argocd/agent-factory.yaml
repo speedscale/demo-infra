@@ -16,8 +16,10 @@ spec:
         # can't be shared across intake-api/worker or survive a rolling update.
         persistence:
           enabled: false
-        image:
-          tag: v0.1.83
+        # image.tag intentionally unset: it defaults to the chart appVersion.
+        # Safe since agent-factory#119 — CI publishes the image (bare and
+        # v-prefixed tags) to ghcr *before* committing the version bump, so
+        # the appVersion tag always exists by the time ArgoCD syncs it.
         engine:
           kind: claude-sdk
           model: claude-opus-4-7
@@ -29,6 +31,12 @@ spec:
           path: /var/lib/agent-factory/archive
         intakeApi:
           replicas: 1
+          # The OTLP receiver buffers up to 8 services × 10k RRPairs per 60s
+          # window; the chart-default 512Mi limit OOM-killed the pod (exit
+          # 137, 21 restarts). Give it headroom.
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:   { cpu: "1",  memory: 1Gi }
           otlp:
             enabled: true
             archive:
@@ -44,5 +52,9 @@ spec:
   syncPolicy:
     automated:
       selfHeal: true
+      # Prune resources the chart no longer renders. Without this the
+      # standalone worker Deployment (replaced by worker.colocated) was
+      # orphaned at v0.1.83 and kept the app permanently OutOfSync.
+      prune: true
     syncOptions:
     - CreateNamespace=true
