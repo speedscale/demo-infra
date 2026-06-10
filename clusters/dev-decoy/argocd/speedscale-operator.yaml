@@ -19,6 +19,9 @@ spec:
           enabled: true
         ebpf:
           enabled: true
+          configuration:
+            telemetry:
+              enabled: true
         forwarder:
           exporters:
             agent_factory:
@@ -40,8 +43,6 @@ spec:
             requests:
               cpu: 300m
               memory: 512M
-        imageTags:
-          nettap: v0.1.14
         logLevel: debug
   destination:
     server: https://kubernetes.default.svc
