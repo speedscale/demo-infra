@@ -46,7 +46,7 @@ spec:
           authSecret:
             name: speedscale-api-key
             key: token
-          appUrl: staging.speedscale.com
+          appUrl: dev.speedscale.com
         intakeApi:
           replicas: 1
           # The OTLP receiver buffers up to 8 services × 10k RRPairs per 60s
