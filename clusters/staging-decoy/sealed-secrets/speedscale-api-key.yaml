@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: speedscale-api-key
+  namespace: agent-factory
+spec:
+  encryptedData:
+    token: AgCaB65vG8J/JMtF/RmlM+tvUmMc2nZvccJETMIOMwf5thkSZhzRm8gr511Pjvgz0aTlg+LoUytEe5K7+UHkl54BVMPqAMbxaojaTxD1f9tKhY66O0T7FBqyoAELpZ0x88LGPx0czd1tsOoJPXnVp45hIoTjuSR31AVOBaZW9nFAhs8lXCqnN8UgMLbNjTz1Jk2TcZlYPNX/l758NCmv3oKz3Lvbk0Jt9GYzYp96ZWqfgLPRtG5gaRbAR++xTSxd8zuyj1C3Sodw7eMuHOWB240RZgWDRyxiNZxpuhTzqosmjp0l5xM5mk+yeXAobXRPzEi/f5M+cJRNjg7TW4W9K9gEZjbxx4a5eLzJZP2Wmu6uALvIE3VRd3u1aa2L2hB8/ru8R+Yo/hrs/NkeGJlv/rjfJQRnNDZYui5LATEQ8MgxrsaIz6WjTASvmekNWuhphLWRh3CNq7VsJtXOYQTk507fBWA3ydpSGxEKchyIxjood1OYiGTxj0iB1HSc+mVglNRoGDHP801KXmxhx8XdoocsATSY3qoskR81iZB70+b2lH45ZVbYT23wLCIevFH2708tB97MTIExM/R974E+hnh3/D6yBw9BGo81ZXmNGVXfrE5xOGbI+JiRSYL8YuNHxwWMGy2XXd5Koqh7RPt+ZENKfADZyu2VtcAyJ6jXW1CseUmrFWl4lOXRAkfqQjFHMw3CMTIDRbFJXTwS1WsIC1lb/eItx8HNNXyp7STA5Ieb8M5RtDEc/00dlyqNmHU=
+  template:
+    metadata:
+      name: speedscale-api-key
+      namespace: agent-factory
