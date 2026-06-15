@@ -21,14 +21,32 @@ spec:
         # v-prefixed tags) to ghcr *before* committing the version bump, so
         # the appVersion tag always exists by the time ArgoCD syncs it.
         engine:
-          kind: claude-sdk
-          model: claude-opus-4-7
+          # gpt-5.4-mini over the OpenAI API. Anthropic spend is paused
+          # (the anthropic-api-key secret holds a knowingly-invalid key);
+          # mini is ~$5-25/mo at this cluster's run volume and benches
+          # near-flagship on tool calling. Requires agent-factory >= v0.1.94
+          # (generic-llm auth/endpoint wiring, agent-factory#121) — satisfied
+          # since image.tag tracks chart appVersion.
+          kind: generic-llm
+          model: gpt-5.4-mini
+          endpoint: https://api.openai.com/v1
           authSecret:
-            name: anthropic-api-key
+            name: openai-api-key   # key: token — scripts/create-openai-secret.sh
             key: token
         archive:
           backend: local
           path: /var/lib/agent-factory/archive
+        linear:
+          authSecret:
+            name: linear-api-key   # pre-existing in-cluster secret, key: token
+            key: token
+        speedscale:
+          # proxymock init auth for the reproduce worker's live replay
+          # (agent-factory#126). Secret pre-exists in the namespace.
+          authSecret:
+            name: speedscale-api-key
+            key: token
+          appUrl: staging.speedscale.com
         intakeApi:
           replicas: 1
           # The OTLP receiver buffers up to 8 services × 10k RRPairs per 60s
@@ -44,8 +62,31 @@ spec:
               endpoint: https://nyc3.digitaloceanspaces.com
               region: us-east-1
               secretName: agent-factory-archive-s3   # keys: access-key-id, secret-access-key
+          # External alert trigger (Datadog / Grafana / PagerDuty). Exposed via
+          # the apex-gateway HTTPRoute (clusters/dev-decoy/gateway) at
+          # apex-agent-factory-dev.trafficreplay.com/webhooks/*. Creates a
+          # snapshot of the impacted service's traffic 10 min before the alert,
+          # authenticating with speedscale.authSecret above. serviceMapping is
+          # left empty (alert service hint used as-is); add entries once the
+          # real alert payloads' service names are known. Provider signature
+          # secrets are unset for now ⇒ verification skipped (dev demo).
+          alertWebhook:
+            enabled: true
+            lookbackMinutes: 10
         worker:
+          # Run the worker inside the intake-api pod (shared emptyDir). With
+          # persistence off, separate pods can't see each other's queued runs,
+          # so the reproduce handoff only works colocated. Requires chart
+          # support from agent-factory#116.
+          colocated: true
           replicas: 1
+          reproduce:
+            # Live replay: {service} expands to the signal's service, so each
+            # reproduce run replays its archived failing traffic against the
+            # service that emitted it (banking demo apps live in banking-app).
+            replayTarget: "http://{service}.banking-app.svc.cluster.local"
+            # Linear team "Speedscale" — auto-filed tickets titled "[auto] …".
+            linearTeamId: 2828a19c-1d7c-4f87-b477-1d15d426effd
   destination:
     server: https://kubernetes.default.svc
     namespace: agent-factory

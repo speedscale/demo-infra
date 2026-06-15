@@ -62,6 +62,17 @@ spec:
               endpoint: https://nyc3.digitaloceanspaces.com
               region: us-east-1
               secretName: agent-factory-archive-s3   # keys: access-key-id, secret-access-key
+          # External alert trigger (Datadog / Grafana / PagerDuty). Exposed via
+          # the apex-gateway HTTPRoute (clusters/staging-decoy/gateway) at
+          # apex-agent-factory-staging.trafficreplay.com/webhooks/*. Creates a
+          # snapshot of the impacted service's traffic 10 min before the alert,
+          # authenticating with speedscale.authSecret above. serviceMapping is
+          # left empty (alert service hint used as-is); add entries once the
+          # real alert payloads' service names are known. Provider signature
+          # secrets are unset for now ⇒ verification skipped (staging demo).
+          alertWebhook:
+            enabled: true
+            lookbackMinutes: 10
         worker:
           # Run the worker inside the intake-api pod (shared emptyDir). With
           # persistence off, separate pods can't see each other's queued runs,
