@@ -1,0 +1,23 @@
+# banking-ai service replay — mock the LLM providers.
+#
+# Replays recorded /api/chat traffic against banking-ai and MOCKS every external
+# LLM provider (Anthropic/Claude, OpenAI, Google Gemini, xAI/Grok, OpenRouter),
+# so the gate is deterministic, fast, and costs $0 in API credits instead of
+# making real model calls.
+#
+# - testConfigID banking-ai-mock = status-code assertions only (LLM output is
+#   non-deterministic, so don't body-match) + passthroughMode off (mock, don't
+#   call the real providers).
+# - The snapshot AND the test-config must exist in BOTH tenants the quality job
+#   runs against (dev-decoy -> dev.speedscale.com, staging-decoy ->
+#   staging.speedscale.com), since run-replay.sh uses one id for all clusters.
+#   Push each to each tenant with the same id, e.g.:
+#     proxymock cloud push snapshot 739f8a49-8b92-43c3-8a84-7fa498ce43f0 --context <tenant>
+#     speedctl push test-config banking-ai-mock --context <tenant>
+#
+# Verified on staging-decoy: 16 /api/chat -> 200, providers served from mocks, gate Passed.
+name: banking-ai
+workload: banking-ai
+namespace: banking-app
+snapshotID: 739f8a49-8b92-43c3-8a84-7fa498ce43f0
+testConfigID: banking-ai-mock
