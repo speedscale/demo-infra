@@ -9,6 +9,101 @@ spec:
     repoURL: https://github.com/speedscale/microsvc
     targetRevision: HEAD
     path: kubernetes/overlays/speedscale
+    # staging-decoy is the recording cluster for the AI / banking demo. Switch every
+    # workload from eBPF capture to the goproxy sidecar so we get:
+    #   - clean inbound bodies for Python (FastAPI/uvicorn responses, no garble)
+    #   - TLS-decrypted outbound to the 5 LLM providers (eBPF can't see them at all)
+    #   - gRPC h2c dissection on banking-fraud (eBPF didn't, S-12073)
+    #   - Stripe / PayPal / ComplyAdvantage outbound on banking-transactions
+    # Gotcha: `capture.speedscale.com/java-agent` is REJECTED by the sidecar admission
+    # webhook when sidecar.inject=true (the sidecar handles Java TLS-trust on its own),
+    # so it must be REMOVED on Java services. dev-decoy keeps eBPF mode via its own
+    # ArgoCD app (clusters/dev-decoy/argocd/microsvc.yaml — left untouched).
+    kustomize:
+      patches:
+        - target: { kind: Deployment, name: banking-ai }
+          patch: |-
+            - op: replace
+              path: /metadata/annotations/capture.speedscale.com~1enabled
+              value: "false"
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1inject
+              value: "true"
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1tls-out
+              value: "true"
+        - target: { kind: Deployment, name: banking-accounts }
+          patch: |-
+            - op: replace
+              path: /metadata/annotations/capture.speedscale.com~1enabled
+              value: "false"
+            - op: remove
+              path: /metadata/annotations/capture.speedscale.com~1java-agent
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1inject
+              value: "true"
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1tls-out
+              value: "true"
+        - target: { kind: Deployment, name: banking-transactions }
+          patch: |-
+            - op: replace
+              path: /metadata/annotations/capture.speedscale.com~1enabled
+              value: "false"
+            - op: remove
+              path: /metadata/annotations/capture.speedscale.com~1java-agent
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1inject
+              value: "true"
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1tls-out
+              value: "true"
+        - target: { kind: Deployment, name: banking-gateway }
+          patch: |-
+            - op: replace
+              path: /metadata/annotations/capture.speedscale.com~1enabled
+              value: "false"
+            - op: remove
+              path: /metadata/annotations/capture.speedscale.com~1java-agent
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1inject
+              value: "true"
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1tls-out
+              value: "true"
+        - target: { kind: Deployment, name: banking-user }
+          patch: |-
+            - op: replace
+              path: /metadata/annotations/capture.speedscale.com~1enabled
+              value: "false"
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1inject
+              value: "true"
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1tls-out
+              value: "true"
+        - target: { kind: Deployment, name: banking-fraud }
+          patch: |-
+            - op: replace
+              path: /metadata/annotations/capture.speedscale.com~1enabled
+              value: "false"
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1inject
+              value: "true"
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1tls-out
+              value: "true"
+        - target: { kind: Deployment, name: banking-notification }
+          patch: |-
+            - op: replace
+              path: /metadata/annotations/capture.speedscale.com~1enabled
+              value: "false"
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1inject
+              value: "true"
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1tls-out
+              value: "true"
   destination:
     server: https://kubernetes.default.svc
     namespace: banking-app
