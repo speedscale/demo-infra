@@ -10,63 +10,12 @@ on:
         default: 'all'
 
 jobs:
-  replay:
+  ci-replay:
+    name: CI replay (proxymock)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        cluster: [dev-decoy, staging-decoy]
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v5
-
-    - name: Install doctl
-      uses: digitalocean/action-doctl@v2
-      with:
-        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-
-    - name: Install speedctl
-      run: |
-        curl -sL https://downloads.speedscale.com/speedctl/install | bash
-        echo "$HOME/.speedscale" >> $GITHUB_PATH
-
-    - name: Install proxymock
-      run: |
-        curl -sL https://downloads.speedscale.com/proxymock/install-proxymock | sh
-        echo "$HOME/.speedscale" >> $GITHUB_PATH
-
-    - name: Configure speedctl
-      env:
-        SPEEDCTL_DEV_CONFIG: ${{ secrets.SPEEDCTL_DEV_CONFIG }}
-        SPEEDCTL_STAGING_CONFIG: ${{ secrets.SPEEDCTL_STAGING_CONFIG }}
-      run: |
-        mkdir -p "$HOME/.speedscale"
-        CLUSTER="${{ matrix.cluster }}"
-        if [[ "$CLUSTER" == "dev-decoy" ]]; then
-          echo "$SPEEDCTL_DEV_CONFIG" > "$HOME/.speedscale/config.yaml"
-        elif [[ "$CLUSTER" == "staging-decoy" ]]; then
-          echo "$SPEEDCTL_STAGING_CONFIG" > "$HOME/.speedscale/config.yaml"
-        fi
-
-    - name: Skip if filtered
-      if: github.event_name == 'workflow_dispatch' && github.event.inputs.cluster != 'all' && github.event.inputs.cluster != matrix.cluster
-      run: echo "Skipping ${{ matrix.cluster }} (filtered to ${{ github.event.inputs.cluster }})" && exit 0
-
-    - name: Run replays
-      if: github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == matrix.cluster
-      env:
-        SPEEDCTL_HOME: ${{ runner.temp }}/speedctl
-      run: |
-        mkdir -p "$SPEEDCTL_HOME"
-        cp "$HOME/.speedscale/config.yaml" "$SPEEDCTL_HOME/config.yaml"
-        ./quality/scripts/run-replay.sh ${{ matrix.cluster }}
-
-  proxymock:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        cluster: [dev-decoy, staging-decoy]
         replay:
           - banking-accounts
           - banking-ai
@@ -89,37 +38,92 @@ jobs:
         curl -sL https://downloads.speedscale.com/proxymock/install-proxymock | sh
         echo "$HOME/.speedscale" >> $GITHUB_PATH
 
-    - name: Configure speedctl
+    - name: Configure speedctl for CI replay
       env:
         SPEEDCTL_DEV_CONFIG: ${{ secrets.SPEEDCTL_DEV_CONFIG }}
-        SPEEDCTL_STAGING_CONFIG: ${{ secrets.SPEEDCTL_STAGING_CONFIG }}
       run: |
         mkdir -p "$HOME/.speedscale"
-        CLUSTER="${{ matrix.cluster }}"
-        if [[ "$CLUSTER" == "dev-decoy" ]]; then
-          echo "$SPEEDCTL_DEV_CONFIG" > "$HOME/.speedscale/config.yaml"
-        elif [[ "$CLUSTER" == "staging-decoy" ]]; then
-          echo "$SPEEDCTL_STAGING_CONFIG" > "$HOME/.speedscale/config.yaml"
-        fi
-
-    - name: Skip if filtered
-      if: github.event_name == 'workflow_dispatch' && github.event.inputs.cluster != 'all' && github.event.inputs.cluster != matrix.cluster
-      run: echo "Skipping ${{ matrix.cluster }} (filtered to ${{ github.event.inputs.cluster }})" && exit 0
+        echo "$SPEEDCTL_DEV_CONFIG" > "$HOME/.speedscale/config.yaml"
 
     - name: Run proxymock scenario
-      if: github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == matrix.cluster
       env:
         SPEEDCTL_HOME: ${{ runner.temp }}/speedctl
         SPEEDSCALE_HOME: ${{ runner.temp }}/speedctl
       run: |
         mkdir -p "$SPEEDCTL_HOME"
         cp "$HOME/.speedscale/config.yaml" "$SPEEDCTL_HOME/config.yaml"
-        ./quality/scripts/run-proxymock-scenario.sh ${{ matrix.cluster }} ${{ matrix.replay }}
+        ./quality/scripts/run-proxymock-scenario.sh dev-decoy ${{ matrix.replay }}
 
     - name: Upload proxymock report
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: proxymock-${{ matrix.cluster }}-${{ matrix.replay }}
-        path: quality/proxymock-reports/${{ matrix.cluster }}/${{ matrix.replay }}.json
+        name: proxymock-ci-${{ matrix.replay }}
+        path: quality/proxymock-reports/dev-decoy/${{ matrix.replay }}.json
         if-no-files-found: ignore
+
+  cd-replay-dev:
+    name: CD replay (dev)
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == 'dev-decoy'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+    - name: Install speedctl
+      run: |
+        curl -sL https://downloads.speedscale.com/speedctl/install | bash
+        echo "$HOME/.speedscale" >> $GITHUB_PATH
+
+    - name: Configure speedctl
+      env:
+        SPEEDCTL_DEV_CONFIG: ${{ secrets.SPEEDCTL_DEV_CONFIG }}
+      run: |
+        mkdir -p "$HOME/.speedscale"
+        echo "$SPEEDCTL_DEV_CONFIG" > "$HOME/.speedscale/config.yaml"
+
+    - name: Run dev replays
+      env:
+        SPEEDCTL_HOME: ${{ runner.temp }}/speedctl
+      run: |
+        mkdir -p "$SPEEDCTL_HOME"
+        cp "$HOME/.speedscale/config.yaml" "$SPEEDCTL_HOME/config.yaml"
+        ./quality/scripts/run-replay.sh dev-decoy
+
+  cd-replay-staging:
+    name: CD replay (staging)
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == 'staging-decoy'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+    - name: Install speedctl
+      run: |
+        curl -sL https://downloads.speedscale.com/speedctl/install | bash
+        echo "$HOME/.speedscale" >> $GITHUB_PATH
+
+    - name: Configure speedctl
+      env:
+        SPEEDCTL_STAGING_CONFIG: ${{ secrets.SPEEDCTL_STAGING_CONFIG }}
+      run: |
+        mkdir -p "$HOME/.speedscale"
+        echo "$SPEEDCTL_STAGING_CONFIG" > "$HOME/.speedscale/config.yaml"
+
+    - name: Run staging replays
+      env:
+        SPEEDCTL_HOME: ${{ runner.temp }}/speedctl
+      run: |
+        mkdir -p "$SPEEDCTL_HOME"
+        cp "$HOME/.speedscale/config.yaml" "$SPEEDCTL_HOME/config.yaml"
+        ./quality/scripts/run-replay.sh staging-decoy

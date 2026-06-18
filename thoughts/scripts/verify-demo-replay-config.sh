@@ -113,6 +113,45 @@ for replay in banking-accounts banking-ai banking-fraud banking-gateway banking-
   }
 done
 
+for job in 'ci-replay:' 'cd-replay-dev:' 'cd-replay-staging:'; do
+  grep -q "^  ${job}$" .github/workflows/quality-daily.yaml || {
+    echo "FAIL: quality workflow missing job $job"
+    exit 1
+  }
+done
+
+for name in 'CI replay (proxymock)' 'CD replay (dev)' 'CD replay (staging)'; do
+  grep -q "name: ${name}" .github/workflows/quality-daily.yaml || {
+    echo "FAIL: quality workflow missing job name: $name"
+    exit 1
+  }
+done
+
+grep -q './quality/scripts/run-proxymock-scenario.sh dev-decoy ${{ matrix.replay }}' .github/workflows/quality-daily.yaml || {
+  echo "FAIL: quality workflow CI proxymock job should run the workload matrix once against dev-decoy"
+  exit 1
+}
+
+grep -q './quality/scripts/run-replay.sh dev-decoy' .github/workflows/quality-daily.yaml || {
+  echo "FAIL: quality workflow missing dev CD replay job command"
+  exit 1
+}
+
+grep -q './quality/scripts/run-replay.sh staging-decoy' .github/workflows/quality-daily.yaml || {
+  echo "FAIL: quality workflow missing staging CD replay job command"
+  exit 1
+}
+
+if grep -q 'cluster: \[dev-decoy, staging-decoy\]' .github/workflows/quality-daily.yaml; then
+  echo "FAIL: quality workflow still uses the old cluster matrix"
+  exit 1
+fi
+
+grep -q 'name: proxymock-ci-${{ matrix.replay }}' .github/workflows/quality-daily.yaml || {
+  echo "FAIL: quality workflow proxymock artifact name should identify CI replay only"
+  exit 1
+}
+
 jq -e '
   [ .transforms | to_entries[] | {
       index: .key,
