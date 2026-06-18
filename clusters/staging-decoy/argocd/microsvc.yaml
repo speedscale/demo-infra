@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/speedscale/microsvc
     targetRevision: HEAD
-    path: kubernetes/overlays/speedscale
+    path: kubernetes/overlays/speedscale-sidecar
   destination:
     server: https://kubernetes.default.svc
     namespace: banking-app
