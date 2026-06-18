@@ -1,0 +1,103 @@
+{
+  "id": "banking-app-keys",
+  "redactlist": {
+    "entries": {
+      "all": [
+        "authorization",
+        "plaid-client-id",
+        "plaid-secret",
+        "hibp-api-key",
+        "x-api-key",
+        "socureapikey"
+      ]
+    }
+  },
+  "discoverPatterns": false,
+  "transforms": [
+    {
+      "extractor": {
+        "type": "req_body"
+      },
+      "transforms": [
+        {
+          "type": "json_path",
+          "config": {
+            "path": "$api_key"
+          }
+        },
+        {
+          "type": "dlp_field"
+        }
+      ]
+    },
+    {
+      "extractor": {
+        "type": "http_queryparam",
+        "config": {
+          "name": "app_id"
+        }
+      },
+      "transforms": [
+        {
+          "type": "dlp_field"
+        }
+      ]
+    },
+    {
+      "extractor": {
+        "type": "http_req_header",
+        "config": {
+          "name": "Authorization"
+        }
+      },
+      "transforms": [
+        {
+          "type": "split",
+          "config": {
+            "index": "1",
+            "separator": " "
+          }
+        },
+        {
+          "type": "base64"
+        },
+        {
+          "type": "dlp_field"
+        }
+      ]
+    },
+    {
+      "extractor": {
+        "type": "http_queryparam",
+        "config": {
+          "name": "key"
+        }
+      },
+      "transforms": [
+        {
+          "type": "dlp_field"
+        }
+      ]
+    },
+    {
+      "extractor": {
+        "type": "http_req_header",
+        "config": {
+          "name": "Authorization"
+        }
+      },
+      "transforms": [
+        {
+          "type": "split",
+          "config": {
+            "index": "1",
+            "separator": " "
+          }
+        },
+        {
+          "type": "tag_session"
+        }
+      ]
+    }
+  ]
+}
