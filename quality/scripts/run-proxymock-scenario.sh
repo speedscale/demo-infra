@@ -19,6 +19,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
 fi
 
 info() { echo -e "\033[36m$*\033[0m"; }
+warn() { echo -e "\033[33m$*\033[0m"; }
 
 get_config_value() {
   local file=$1 key=$2
@@ -57,7 +58,11 @@ proxymock cloud pull snapshot "$snapshot_id" \
   --out "$snapshot_dir"
 
 info "Forwarding $namespace/$service:$service_port to localhost:$local_port"
-kubectl -n "$namespace" rollout status "deployment/$service" --timeout=5m
+if ! kubectl -n "$namespace" wait --for=condition=available "deployment/$service" --timeout=5m; then
+  warn "Deployment $namespace/$service is not available"
+  kubectl -n "$namespace" get deployment "$service" || true
+  exit 1
+fi
 port_forward_log="$runner_temp/${name}-port-forward.log"
 kubectl -n "$namespace" port-forward "service/$service" "$local_port:$service_port" >"$port_forward_log" 2>&1 &
 pf_pid=$!
@@ -76,17 +81,23 @@ for attempt in {1..30}; do
 done
 
 info "Replaying proxymock scenario: $name"
+replay_status=0
 proxymock replay \
   --config "$SPEEDCTL_HOME/config.yaml" \
   --in "$snapshot_dir" \
   --out "$result_dir" \
   --test-against "$target" \
   --rewrite-host \
-  --fail-if "requests.failed > 0"
+  --fail-if "requests.failed > 0" || replay_status=$?
 
-proxymock report \
-  --config "$SPEEDCTL_HOME/config.yaml" \
-  --in "$result_dir" \
-  --out "$report_dir/${name}.json"
+if [ -d "$result_dir" ] && [ "$(find "$result_dir" -type f | wc -l | tr -d ' ')" -gt 0 ]; then
+  proxymock report \
+    --config "$SPEEDCTL_HOME/config.yaml" \
+    --in "$result_dir" \
+    --out "$report_dir/${name}.json"
+else
+  warn "No proxymock results written for $name"
+fi
 
 info "Proxymock report: $report_dir/${name}.json"
+exit "$replay_status"

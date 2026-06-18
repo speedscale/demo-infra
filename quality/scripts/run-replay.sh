@@ -89,7 +89,7 @@ for f in "${replay_files[@]}"; do
       --build-tag "$build_tag" \
       --id-only 2>&1) || true
 
-    report_id=$(echo "$output" | grep -Eo '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+    report_id=$(echo "$output" | grep -Eo '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1 || true)
     if [ -n "$report_id" ]; then
       break
     fi

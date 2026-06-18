@@ -81,6 +81,31 @@ grep -q 'proxymock replay' quality/scripts/run-proxymock-scenario.sh || {
   exit 1
 }
 
+grep -q 'grep -Eo .* || true' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner can still exit before printing speedctl startup errors"
+  exit 1
+}
+
+grep -q 'kubectl -n "$namespace" wait --for=condition=available' quality/scripts/run-proxymock-scenario.sh || {
+  echo "FAIL: proxymock runner should wait for deployment availability, not rollout completion"
+  exit 1
+}
+
+grep -q 'replay_status=0' quality/scripts/run-proxymock-scenario.sh || {
+  echo "FAIL: proxymock runner does not preserve replay exit status"
+  exit 1
+}
+
+grep -q 'proxymock report' quality/scripts/run-proxymock-scenario.sh || {
+  echo "FAIL: proxymock runner does not generate reports"
+  exit 1
+}
+
+grep -q '^snapshotID: 7b3d0b6e-f0df-489d-8254-d23f56cce131$' quality/speedctl-replay/banking-fraud.yaml || {
+  echo "FAIL: banking-fraud does not use the replayable inbound fraud snapshot"
+  exit 1
+}
+
 for replay in banking-accounts banking-ai banking-fraud banking-gateway banking-notification banking-transactions banking-user; do
   grep -q -- "- ${replay}" .github/workflows/quality-daily.yaml || {
     echo "FAIL: quality workflow proxymock matrix missing $replay"
