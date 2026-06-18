@@ -44,10 +44,11 @@ jobs:
         fi
 
     - name: Skip if filtered
-      if: github.event.inputs.cluster != '' && github.event.inputs.cluster != 'all' && github.event.inputs.cluster != matrix.cluster
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.cluster != 'all' && github.event.inputs.cluster != matrix.cluster
       run: echo "Skipping ${{ matrix.cluster }} (filtered to ${{ github.event.inputs.cluster }})" && exit 0
 
     - name: Run replays
+      if: github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == matrix.cluster
       env:
         SPEEDCTL_HOME: ${{ runner.temp }}/speedctl
       run: |

@@ -15,9 +15,10 @@
 #     proxymock cloud push snapshot 739f8a49-8b92-43c3-8a84-7fa498ce43f0 --context <tenant>
 #     speedctl push test-config banking-ai-mock --context <tenant>
 #
-# Verified on staging-decoy: 16 /api/chat -> 200, providers served from mocks, gate Passed.
+# Runs against the isolated replay namespace so daily reports do not compete
+# with live demo traffic in banking-app.
 name: banking-ai
 workload: banking-ai
-namespace: banking-app
+namespace: banking-replay
 snapshotID: 739f8a49-8b92-43c3-8a84-7fa498ce43f0
 testConfigID: banking-ai-mock
