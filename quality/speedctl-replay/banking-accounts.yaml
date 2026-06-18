@@ -1,7 +1,9 @@
 name: banking-accounts
 workload: banking-accounts
 namespace: banking-replay
-snapshotID: ac08e091-07b2-4969-8106-2cf6d7459260
+snapshotID: f450f457-bb1d-43c2-acd3-24273e28b58f
+devSnapshotID: 4b7fdcac-4203-4474-b4d6-2b6984e14723
+stagingSnapshotID: f450f457-bb1d-43c2-acd3-24273e28b58f
 testConfigID: banking-daily-replay
 service: banking-accounts
 servicePort: 80

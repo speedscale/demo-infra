@@ -2,6 +2,8 @@ name: banking-user
 workload: banking-user
 namespace: banking-replay
 snapshotID: effa29f8-4a0d-4b20-a142-664de00ab4e6
+devSnapshotID: fb2382d4-40f4-48a1-a146-172830ede77d
+stagingSnapshotID: effa29f8-4a0d-4b20-a142-664de00ab4e6
 testConfigID: banking-daily-replay
 service: banking-user
 servicePort: 80

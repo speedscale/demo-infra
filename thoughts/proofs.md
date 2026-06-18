@@ -27,3 +27,15 @@
 - **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS; `bash -n` passed for replay scripts; YAML and JSON parsed successfully; fraud snapshot `7b3d0b6e-f0df-489d-8254-d23f56cce131` is Complete with inbound traffic in staging and dev
 - **Status**: PROVEN
 - **Date**: 2026-06-18
+
+## Daily CD replays use tenant-owned snapshots and longer prep timeout
+- **Level**: Integration
+- **Evidence**: dev snapshots `4b7fdcac-4203-4474-b4d6-2b6984e14723`, `592d055c-1d40-4706-aa9b-52d8c889d428`, `75ef5e98-2755-45c4-ba4a-8747c5fbb13d`, `6c480801-53d2-4c10-b6a0-2089de176ce9`, `f3cc7c23-fb1f-4d66-9883-6a883af1d573`, `03965c2e-40fc-4227-8757-530d598a487a`, and `fb2382d4-40f4-48a1-a146-172830ede77d` are Complete with `cluster=dev-decoy` and inbound traffic; staging snapshots `f450f457-bb1d-43c2-acd3-24273e28b58f` and `3b3bc298-0f5d-456c-ae1d-20f1ad2022b8` repair the PG startup corpus for accounts and transactions; both operator apps set `test_prep_timeout: 20m`
+- **Status**: PROVEN
+- **Date**: 2026-06-18
+
+## Replay namespace disables DB migrations and schema validation
+- **Level**: Integration
+- **Evidence**: `kubectl kustomize demos/microsvc/kubernetes/overlays/replay` renders `SPRING_FLYWAY_ENABLED=false` and `SPRING_JPA_HIBERNATE_DDL_AUTO=none` for banking-user, banking-accounts, and banking-transactions; dev smoke replays `125ed8c9-4775-4815-86ac-863c72a0c01a` and `79fd1a97-8e44-45c7-8fc1-cb28f5302048` reached `Missed Goals` instead of `Error`
+- **Status**: PROVEN
+- **Date**: 2026-06-18

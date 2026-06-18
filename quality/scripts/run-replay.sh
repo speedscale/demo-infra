@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -18,6 +18,15 @@ fi
 
 REPLAY_DIR="$REPO_ROOT/quality/speedctl-replay"
 
+declare -a speedctl_args
+if [ -n "${SPEEDCTL_CONFIG:-}" ]; then
+  speedctl_args=(--config "$SPEEDCTL_CONFIG")
+fi
+
+speedctl_cmd() {
+  speedctl "${speedctl_args[@]}" "$@"
+}
+
 # --- logging ---
 info()  { echo -e "\033[36m$*\033[0m"; }
 warn()  { echo -e "\033[33m$*\033[0m"; }
@@ -30,10 +39,10 @@ info "Connecting to cluster: $CLUSTER_NAME"
 info "Setting up speedctl"
 mkdir -p "${SPEEDCTL_HOME:-$HOME/.speedscale}"
 SPEEDCTL_HOME="${SPEEDCTL_HOME:-$HOME/.speedscale}"
-speedctl check
+speedctl_cmd check
 
 info "Syncing daily replay test config"
-speedctl put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"
+speedctl_cmd put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"
 
 # --- collect replay configs ---
 declare -a replay_files
@@ -71,6 +80,8 @@ for f in "${replay_files[@]}"; do
   workload=$(get_config_value "$f" "workload")
   namespace=$(get_config_value "$f" "namespace")
   snapshot_id=$(get_config_value "$f" "snapshotID")
+  dev_snapshot_id=$(get_config_value "$f" "devSnapshotID")
+  staging_snapshot_id=$(get_config_value "$f" "stagingSnapshotID")
   test_config_id=$(get_config_value "$f" "testConfigID")
   run_id="${GITHUB_RUN_ID:-local}"
   run_attempt="${GITHUB_RUN_ATTEMPT:-1}"
@@ -78,16 +89,25 @@ for f in "${replay_files[@]}"; do
   workload_tag="${name#banking-}"
   build_tag="qd:${cluster_tag}:${workload_tag}:${run_id}.${run_attempt}"
 
+  case "$CLUSTER_NAME" in
+    dev-decoy)
+      [ -n "$dev_snapshot_id" ] && snapshot_id="$dev_snapshot_id"
+      ;;
+    staging-decoy)
+      [ -n "$staging_snapshot_id" ] && snapshot_id="$staging_snapshot_id"
+      ;;
+  esac
+
   if [ ${#build_tag} -gt 50 ]; then
     error "Build tag is too long (${#build_tag} chars): $build_tag"
     exit 1
   fi
 
-  info "Launching replay: $name (workload=$workload, ns=$namespace, tag=$build_tag)"
+  info "Launching replay: $name (workload=$workload, ns=$namespace, snapshot=$snapshot_id, tag=$build_tag)"
 
   report_id=""
   for attempt in 1 2 3; do
-    output=$(speedctl infra replay \
+    output=$(speedctl_cmd infra replay \
       --cluster "$CLUSTER_NAME" \
       --namespace "$namespace" \
       --service "$workload" \
@@ -144,7 +164,7 @@ while true; do
     fi
 
     rid="${report_ids[$name]}"
-    report=$(speedctl get report "$rid" 2>/dev/null || echo "")
+    report=$(speedctl_cmd get report "$rid" 2>/dev/null || echo "")
 
     if [ -n "$report" ]; then
       report_status=$(echo "$report" | jq -r '.report.status // "unknown"' 2>/dev/null || echo "unknown")

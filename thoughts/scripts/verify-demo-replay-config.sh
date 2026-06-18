@@ -43,7 +43,7 @@ for replay in banking-accounts banking-ai banking-fraud banking-gateway banking-
     exit 1
   }
 
-  for field in name workload namespace snapshotID testConfigID service servicePort localPort proxymockTarget; do
+  for field in name workload namespace snapshotID devSnapshotID stagingSnapshotID testConfigID service servicePort localPort proxymockTarget; do
     grep -q "^${field}:" "$cfg" || {
       echo "FAIL: $cfg missing $field"
       exit 1
@@ -59,7 +59,34 @@ for replay in banking-accounts banking-ai banking-fraud banking-gateway banking-
     echo "FAIL: $cfg does not use banking-daily-replay"
     exit 1
   }
+
+  base_snapshot=$(awk '$1=="snapshotID:" {print $2; exit}' "$cfg")
+  staging_snapshot=$(awk '$1=="stagingSnapshotID:" {print $2; exit}' "$cfg")
+  if [ "$base_snapshot" != "$staging_snapshot" ]; then
+    echo "FAIL: $cfg stagingSnapshotID should match snapshotID for proxymock/staging"
+    exit 1
+  fi
 done
+
+grep -q 'devSnapshotID' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner does not read devSnapshotID"
+  exit 1
+}
+
+grep -q 'stagingSnapshotID' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner does not read stagingSnapshotID"
+  exit 1
+}
+
+grep -q 'dev-decoy)' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner does not select dev snapshots for dev-decoy"
+  exit 1
+}
+
+grep -q 'staging-decoy)' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner does not select staging snapshots for staging-decoy"
+  exit 1
+}
 
 grep -q -- '--build-tag "$build_tag"' quality/scripts/run-replay.sh || {
   echo "FAIL: replay runner does not pass build tags to speedctl"
@@ -86,7 +113,12 @@ for cluster in dev staging; do
   done
 done
 
-grep -q 'speedctl put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"' quality/scripts/run-replay.sh || {
+grep -q 'speedctl_args=(--config "$SPEEDCTL_CONFIG")' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner does not allow explicit SPEEDCTL_CONFIG selection"
+  exit 1
+}
+
+grep -q 'speedctl_cmd put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"' quality/scripts/run-replay.sh || {
   echo "FAIL: replay runner does not sync banking-daily-replay"
   exit 1
 }
@@ -123,6 +155,11 @@ grep -q 'proxymock report' quality/scripts/run-proxymock-scenario.sh || {
 
 grep -q '^snapshotID: 7b3d0b6e-f0df-489d-8254-d23f56cce131$' quality/speedctl-replay/banking-fraud.yaml || {
   echo "FAIL: banking-fraud does not use the replayable inbound fraud snapshot"
+  exit 1
+}
+
+grep -q '^devSnapshotID: 75ef5e98-2755-45c4-ba4a-8747c5fbb13d$' quality/speedctl-replay/banking-fraud.yaml || {
+  echo "FAIL: banking-fraud does not use the dev-owned inbound fraud snapshot for dev replay"
   exit 1
 }
 
@@ -218,6 +255,12 @@ for cluster in dev-decoy staging-decoy; do
   }
   grep -q 'namespace: banking-replay' "$app" || {
     echo "FAIL: $app does not deploy to banking-replay"
+    exit 1
+  }
+
+  operator_app="clusters/${cluster}/argocd/speedscale-operator.yaml"
+  grep -q 'test_prep_timeout: 20m' "$operator_app" || {
+    echo "FAIL: $operator_app does not set a 20m replay prep timeout"
     exit 1
   }
 done
