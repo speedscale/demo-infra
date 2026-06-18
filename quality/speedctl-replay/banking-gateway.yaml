@@ -1,0 +1,9 @@
+name: banking-gateway
+workload: banking-gateway
+namespace: banking-replay
+snapshotID: e7187688-56d3-4a94-aaf0-428cf067461f
+testConfigID: banking-daily-replay
+service: banking-gateway
+servicePort: 80
+localPort: 18080
+proxymockTarget: http://localhost:18080

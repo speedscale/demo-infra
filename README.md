@@ -23,20 +23,23 @@ This installs ArgoCD and applies all Application manifests for the cluster.
 
 ```bash
 ./quality/scripts/run-replay.sh dev-decoy
+./quality/scripts/run-proxymock-scenario.sh dev-decoy banking-gateway
 ```
 
 ## How It Works
 
 - **ArgoCD** manages app deployments (microsvc, microsvc-replay, speedscale-operator) via GitOps
 - **GitHub Actions** applies ArgoCD manifests on push to main and runs daily quality replays
-- **Quality jobs** use `speedctl infra replay` against `banking-replay` so report traffic stays isolated from the live `banking-app` demo
+- **Quality jobs** run one Speedscale replay per workload against `banking-replay` so report traffic stays isolated from the live `banking-app` demo
+- **Proxymock jobs** pull the same snapshot IDs from Speedscale Cloud and replay them from GitHub Actions through a port-forwarded service
 
 ## Directory Layout
 
 ```
 clusters/<name>/argocd/    ArgoCD Application manifests per cluster
 clusters/<name>/cluster.yaml   Cluster metadata
-quality/speedctl-replay/   Replay configs (snapshot ID, test config, workload)
+quality/speedctl-replay/   Replay configs (snapshot ID, test config, workload, proxymock target)
+quality/test-configs/      Speedscale test configs synced by CI before replay
 quality/dlp/               Speedscale DLP configs used by demo clusters
 quality/scripts/           Replay runner and cluster connection scripts
 scripts/                   One-time bootstrap and ArgoCD install

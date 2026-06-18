@@ -32,6 +32,9 @@ mkdir -p "${SPEEDCTL_HOME:-$HOME/.speedscale}"
 SPEEDCTL_HOME="${SPEEDCTL_HOME:-$HOME/.speedscale}"
 speedctl check
 
+info "Syncing daily replay test config"
+speedctl put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"
+
 # --- collect replay configs ---
 declare -a replay_files
 if [ "$REPLAY_FILTER" = "all" ]; then

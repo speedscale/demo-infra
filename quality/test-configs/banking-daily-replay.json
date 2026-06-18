@@ -1,0 +1,45 @@
+{
+  "id": "banking-daily-replay",
+  "generator": {
+    "stages": [
+      {
+        "virtualUsers": {
+          "virtualUsers": "1",
+          "requestDelay": {}
+        }
+      }
+    ],
+    "evaluationIntervals": 5
+  },
+  "rules": [
+    {
+      "metricName": "passAssertPct",
+      "type": "TOO_LOW",
+      "value": 100,
+      "action": "ALERT"
+    }
+  ],
+  "version": 3,
+  "assertionGroups": [
+    {
+      "configs": [
+        {
+          "type": "httpStatusCode"
+        }
+      ]
+    }
+  ],
+  "responder": {
+    "numReplicas": 1,
+    "responseDelay": {
+      "mode": "RECORDED"
+    }
+  },
+  "cluster": {
+    "cleanup": "inventory",
+    "replayMode": "full-replay",
+    "sidecarTlsOut": true,
+    "logLevel": "info",
+    "logsCollected": true
+  }
+}
