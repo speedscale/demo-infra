@@ -74,7 +74,14 @@ for f in "${replay_files[@]}"; do
   test_config_id=$(get_config_value "$f" "testConfigID")
   run_id="${GITHUB_RUN_ID:-local}"
   run_attempt="${GITHUB_RUN_ATTEMPT:-1}"
-  build_tag="${GITHUB_WORKFLOW:-manual}:${CLUSTER_NAME}:${name}:${run_id}.${run_attempt}"
+  cluster_tag="${CLUSTER_NAME%-decoy}"
+  workload_tag="${name#banking-}"
+  build_tag="qd:${cluster_tag}:${workload_tag}:${run_id}.${run_attempt}"
+
+  if [ ${#build_tag} -gt 50 ]; then
+    error "Build tag is too long (${#build_tag} chars): $build_tag"
+    exit 1
+  fi
 
   info "Launching replay: $name (workload=$workload, ns=$namespace, tag=$build_tag)"
 

@@ -10,6 +10,12 @@
 - **Level**: Live traffic
 - **Evidence**: Proxymock MCP snapshot `f2aab847-ca40-4d93-b628-e76a2c20cb2c`, `2026-06-19T01:23:37Z` to `2026-06-19T01:28:37Z`: 458 inbound `banking-accounts` records had plain sessions; 0 were JWT-shaped, redacted, blank, or hex.
 
+## Daily replay build tags stay short enough for Speedscale
+- **Level**: Integration
+- **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS; `bash -n quality/scripts/run-replay.sh` passed; longest expected daily tag is below the 50-character guard
+- **Status**: PROVEN
+- **Date**: 2026-06-18
+
 ## Daily workflow is split into CI proxymock, CD dev replay, and CD staging replay
 - **Level**: Integration
 - **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS; `bash -n` passed for replay scripts; `quality-daily.yaml` parsed successfully; `git diff --check` passed

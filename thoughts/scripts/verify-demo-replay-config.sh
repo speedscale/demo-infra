@@ -66,6 +66,26 @@ grep -q -- '--build-tag "$build_tag"' quality/scripts/run-replay.sh || {
   exit 1
 }
 
+grep -q 'build_tag="qd:${cluster_tag}:${workload_tag}:${run_id}.${run_attempt}"' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner does not use compact build tags"
+  exit 1
+}
+
+grep -q '\${#build_tag} -gt 50' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner does not guard build tag length"
+  exit 1
+}
+
+for cluster in dev staging; do
+  for replay in banking-accounts banking-ai banking-fraud banking-gateway banking-notification banking-transactions banking-user; do
+    tag="qd:${cluster}:${replay#banking-}:27792876679.1"
+    if [ ${#tag} -gt 50 ]; then
+      echo "FAIL: expected build tag is too long (${#tag} chars): $tag"
+      exit 1
+    fi
+  done
+done
+
 grep -q 'speedctl put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"' quality/scripts/run-replay.sh || {
   echo "FAIL: replay runner does not sync banking-daily-replay"
   exit 1
