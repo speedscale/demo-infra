@@ -1,0 +1,9 @@
+name: banking-fraud
+workload: banking-fraud
+namespace: banking-replay
+snapshotID: b02c9dda-1d6a-45b8-ba61-133e4c9326b1
+testConfigID: banking-daily-replay
+service: banking-fraud
+servicePort: 50051
+localPort: 15051
+proxymockTarget: localhost:15051

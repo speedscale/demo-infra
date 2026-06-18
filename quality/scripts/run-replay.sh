@@ -32,6 +32,9 @@ mkdir -p "${SPEEDCTL_HOME:-$HOME/.speedscale}"
 SPEEDCTL_HOME="${SPEEDCTL_HOME:-$HOME/.speedscale}"
 speedctl check
 
+info "Syncing daily replay test config"
+speedctl put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"
+
 # --- collect replay configs ---
 declare -a replay_files
 if [ "$REPLAY_FILTER" = "all" ]; then
@@ -69,8 +72,11 @@ for f in "${replay_files[@]}"; do
   namespace=$(get_config_value "$f" "namespace")
   snapshot_id=$(get_config_value "$f" "snapshotID")
   test_config_id=$(get_config_value "$f" "testConfigID")
+  run_id="${GITHUB_RUN_ID:-local}"
+  run_attempt="${GITHUB_RUN_ATTEMPT:-1}"
+  build_tag="${GITHUB_WORKFLOW:-manual}:${CLUSTER_NAME}:${name}:${run_id}.${run_attempt}"
 
-  info "Launching replay: $name (workload=$workload, ns=$namespace)"
+  info "Launching replay: $name (workload=$workload, ns=$namespace, tag=$build_tag)"
 
   report_id=""
   for attempt in 1 2 3; do
@@ -80,6 +86,7 @@ for f in "${replay_files[@]}"; do
       --service "$workload" \
       --snapshot-id "$snapshot_id" \
       --test-config-id "$test_config_id" \
+      --build-tag "$build_tag" \
       --id-only 2>&1) || true
 
     report_id=$(echo "$output" | grep -Eo '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
