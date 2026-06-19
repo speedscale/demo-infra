@@ -60,6 +60,6 @@
 
 ## Proxymock CI runs a Postman auth preflight before replay
 - **Level**: Integration
-- **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS; `quality/postman/banking-auth.postman_collection.json` logs in as the seeded demo user, and `quality/scripts/run-proxymock-scenario.sh` runs that preflight through `banking-gateway` before replacing banking Authorization headers in the pulled snapshot.
+- **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS; `quality/postman/banking-auth.postman_collection.json` defines the login request, and `quality/scripts/run-proxymock-scenario.sh` runs that preflight through `banking-gateway` before replacing each recorded banking JWT subject with a fresh login token for the same subject.
 - **Status**: PROVEN
 - **Date**: 2026-06-19

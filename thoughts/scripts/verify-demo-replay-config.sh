@@ -198,6 +198,16 @@ grep -q 'Postman auth preflight did not update any banking Authorization headers
   exit 1
 }
 
+grep -q 'decode_jwt_subject' quality/scripts/apply-postman-auth-preflight.sh || {
+  echo "FAIL: Postman auth preflight should preserve recorded JWT subjects"
+  exit 1
+}
+
+grep -q 'for $token_count recorded JWT subject' quality/scripts/apply-postman-auth-preflight.sh || {
+  echo "FAIL: Postman auth preflight should report per-subject token refresh"
+  exit 1
+}
+
 jq -e '
   .info.name == "Banking Replay Auth"
   and any(.item[]; .name == "Login" and .request.method == "POST" and (.request.url.path | join("/") == "api/users/login"))

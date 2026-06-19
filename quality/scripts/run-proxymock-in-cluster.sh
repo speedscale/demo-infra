@@ -117,11 +117,6 @@ spec:
               mkdir -p /tmp/.speedscale /tmp/snapshot /tmp/results
               cp /config/config.yaml /tmp/.speedscale/config.yaml
               proxymock cloud pull snapshot $snapshot_id --config /tmp/.speedscale/config.yaml --out /tmp/snapshot
-              token_response=\$(wget -q -O- --post-data='{"usernameOrEmail":"harper.clark.001","password":"SimUser123!"}' --header='Content-Type: application/json' http://banking-gateway.$namespace.svc.cluster.local/api/users/login)
-              token=\$(printf '%s' "\$token_response" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
-              if [ -z "\$token" ]; then echo "Postman auth preflight did not return a token"; exit 1; fi
-              export FRESH_TOKEN="\$token"
-              find /tmp/snapshot -type f \( -name '*.md' -o -name '*.json' \) -exec perl -0pi -e 'next unless /direction:\s+IN\b|Host:\s+banking-|http:host is banking-|"host":"banking-/; s/(Authorization:\s*Bearer\s+)[^\r\n\\]+/\${1}\$ENV{FRESH_TOKEN}/g; s/("Authorization"\s*:\s*\[\s*"Bearer\s+)[^"]+/\${1}\$ENV{FRESH_TOKEN}/g;' {} \;
               proxymock replay --config /tmp/.speedscale/config.yaml --in /tmp/snapshot --out /tmp/results --test-against $target --rewrite-host --fail-if 'requests.failed > 0' --output json
 EOF
 
