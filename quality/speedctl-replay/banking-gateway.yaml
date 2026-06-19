@@ -4,6 +4,7 @@ namespace: banking-replay
 snapshotID: e7187688-56d3-4a94-aaf0-428cf067461f
 devSnapshotID: 6c480801-53d2-4c10-b6a0-2089de176ce9
 stagingSnapshotID: 6c480801-53d2-4c10-b6a0-2089de176ce9
+proxymockSnapshotID: 3e22c0d6-c2aa-4403-b3d4-79342d4a253b
 testConfigID: banking-daily-replay
 service: banking-gateway
 servicePort: 80
