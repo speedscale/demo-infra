@@ -45,3 +45,9 @@
 - **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS after failed run `27796833698` showed dev CI could not pull staging-only accounts and transactions snapshots
 - **Status**: PROVEN
 - **Date**: 2026-06-19
+
+## Rebased PR 48 replay config still validates
+- **Level**: Integration
+- **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS after rebasing `demo-daily-workload-replays` onto current `origin/main`; verifier accepts staging snapshots that intentionally use promoted dev snapshot IDs.
+- **Status**: PROVEN
+- **Date**: 2026-06-19

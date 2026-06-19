@@ -61,9 +61,10 @@ for replay in banking-accounts banking-ai banking-fraud banking-gateway banking-
   }
 
   base_snapshot=$(awk '$1=="snapshotID:" {print $2; exit}' "$cfg")
+  dev_snapshot=$(awk '$1=="devSnapshotID:" {print $2; exit}' "$cfg")
   staging_snapshot=$(awk '$1=="stagingSnapshotID:" {print $2; exit}' "$cfg")
-  if [ "$base_snapshot" != "$staging_snapshot" ]; then
-    echo "FAIL: $cfg stagingSnapshotID should match snapshotID for staging"
+  if [ "$base_snapshot" != "$staging_snapshot" ] && [ "$dev_snapshot" != "$staging_snapshot" ]; then
+    echo "FAIL: $cfg stagingSnapshotID should match snapshotID or the promoted devSnapshotID"
     exit 1
   fi
 done
