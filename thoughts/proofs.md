@@ -39,3 +39,9 @@
 - **Evidence**: `kubectl kustomize demos/microsvc/kubernetes/overlays/replay` renders `SPRING_FLYWAY_ENABLED=false` and `SPRING_JPA_HIBERNATE_DDL_AUTO=none` for banking-user, banking-accounts, and banking-transactions; dev smoke replays `125ed8c9-4775-4815-86ac-863c72a0c01a` and `79fd1a97-8e44-45c7-8fc1-cb28f5302048` reached `Missed Goals` instead of `Error`
 - **Status**: PROVEN
 - **Date**: 2026-06-18
+
+## Proxymock CI pulls snapshots from the configured Speedscale tenant
+- **Level**: Integration
+- **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS after failed run `27796833698` showed dev CI could not pull staging-only accounts and transactions snapshots
+- **Status**: PROVEN
+- **Date**: 2026-06-19

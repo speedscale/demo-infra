@@ -63,7 +63,7 @@ for replay in banking-accounts banking-ai banking-fraud banking-gateway banking-
   base_snapshot=$(awk '$1=="snapshotID:" {print $2; exit}' "$cfg")
   staging_snapshot=$(awk '$1=="stagingSnapshotID:" {print $2; exit}' "$cfg")
   if [ "$base_snapshot" != "$staging_snapshot" ]; then
-    echo "FAIL: $cfg stagingSnapshotID should match snapshotID for proxymock/staging"
+    echo "FAIL: $cfg stagingSnapshotID should match snapshotID for staging"
     exit 1
   fi
 done
@@ -125,6 +125,26 @@ grep -q 'speedctl_cmd put test-config "$REPO_ROOT/quality/test-configs/banking-d
 
 grep -q 'proxymock cloud pull snapshot "$snapshot_id"' quality/scripts/run-proxymock-scenario.sh || {
   echo "FAIL: proxymock runner does not pull snapshots from Speedscale Cloud"
+  exit 1
+}
+
+grep -q 'devSnapshotID' quality/scripts/run-proxymock-scenario.sh || {
+  echo "FAIL: proxymock runner does not read devSnapshotID"
+  exit 1
+}
+
+grep -q 'stagingSnapshotID' quality/scripts/run-proxymock-scenario.sh || {
+  echo "FAIL: proxymock runner does not read stagingSnapshotID"
+  exit 1
+}
+
+grep -q 'dev-decoy)' quality/scripts/run-proxymock-scenario.sh || {
+  echo "FAIL: proxymock runner does not select dev snapshots for dev-decoy"
+  exit 1
+}
+
+grep -q 'staging-decoy)' quality/scripts/run-proxymock-scenario.sh || {
+  echo "FAIL: proxymock runner does not select staging snapshots for staging-decoy"
   exit 1
 }
 
