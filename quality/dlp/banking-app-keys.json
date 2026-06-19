@@ -14,6 +14,14 @@
   "discoverPatterns": false,
   "transforms": [
     {
+      "filters": {
+        "filters": [
+          {
+            "include": true,
+            "direction": "OUT"
+          }
+        ]
+      },
       "extractor": {
         "type": "req_body"
       },
@@ -30,6 +38,14 @@
       ]
     },
     {
+      "filters": {
+        "filters": [
+          {
+            "include": true,
+            "direction": "OUT"
+          }
+        ]
+      },
       "extractor": {
         "type": "http_queryparam",
         "config": {
@@ -43,6 +59,14 @@
       ]
     },
     {
+      "filters": {
+        "filters": [
+          {
+            "include": true,
+            "direction": "IN"
+          }
+        ]
+      },
       "extractor": {
         "type": "json_path",
         "config": {
@@ -57,6 +81,14 @@
       ]
     },
     {
+      "filters": {
+        "filters": [
+          {
+            "include": true,
+            "direction": "OUT"
+          }
+        ]
+      },
       "extractor": {
         "type": "http_queryparam",
         "config": {
@@ -70,6 +102,18 @@
       ]
     },
     {
+      "filters": {
+        "filters": [
+          {
+            "include": true,
+            "direction": "OUT"
+          },
+          {
+            "operator": "REGEX",
+            "network_address": "(^banking-|\\.svc|localhost|127\\.0\\.0\\.1)"
+          }
+        ]
+      },
       "extractor": {
         "type": "http_req_header",
         "config": {

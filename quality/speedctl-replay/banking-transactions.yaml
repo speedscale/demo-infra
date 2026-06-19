@@ -1,0 +1,11 @@
+name: banking-transactions
+workload: banking-transactions
+namespace: banking-replay
+snapshotID: 3b3bc298-0f5d-456c-ae1d-20f1ad2022b8
+devSnapshotID: 03965c2e-40fc-4227-8757-530d598a487a
+stagingSnapshotID: 03965c2e-40fc-4227-8757-530d598a487a
+testConfigID: banking-daily-replay
+service: banking-transactions
+servicePort: 80
+localPort: 18080
+proxymockTarget: http://localhost:18080
