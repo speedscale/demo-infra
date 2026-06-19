@@ -66,13 +66,53 @@ fi
 
 info "Found ${#replay_files[@]} replay config(s)"
 
-# --- launch replays ---
+# --- launch and monitor replays ---
 declare -A report_ids
 declare -A replay_statuses
 
 get_config_value() {
   local file=$1 key=$2
   awk -v k="$key" '$1==k":" {gsub(/["'"'"']/, "", $2); print $2; exit}' "$file"
+}
+
+wait_for_replay() {
+  local name=$1 rid=$2
+  local timeout_minutes=${REPLAY_TIMEOUT_MINUTES:-30}
+  local timeout_seconds=$((timeout_minutes * 60))
+  local check_interval=${REPLAY_CHECK_INTERVAL:-60}
+  local start_time elapsed report report_status norm
+
+  start_time=$(date +%s)
+  while true; do
+    elapsed=$(( $(date +%s) - start_time ))
+
+    if [ $elapsed -gt $timeout_seconds ]; then
+      error "  $name: timeout reached (${timeout_minutes}m)"
+      return 1
+    fi
+
+    report=$(speedctl_cmd get report "$rid" 2>/dev/null || echo "")
+
+    if [ -n "$report" ]; then
+      report_status=$(echo "$report" | jq -r '.report.status // "unknown"' 2>/dev/null || echo "unknown")
+      norm=$(echo "$report_status" | tr '[:lower:]' '[:upper:]' | tr ' ' '_')
+      info "  $name: $report_status (${elapsed}s elapsed)"
+
+      case "$norm" in
+        PASSED|MISSED_GOALS)
+          return 0
+          ;;
+        ERROR|CANCELED)
+          error "  $name: terminal status $report_status"
+          return 1
+          ;;
+      esac
+    else
+      info "  $name: waiting for report... (${elapsed}s elapsed)"
+    fi
+
+    sleep "$check_interval"
+  done
 }
 
 for f in "${replay_files[@]}"; do
@@ -133,67 +173,12 @@ for f in "${replay_files[@]}"; do
   info "  Report ID: $report_id"
   report_ids["$name"]="$report_id"
   replay_statuses["$name"]="running"
-done
 
-# --- monitor replays ---
-TIMEOUT_MINUTES=30
-TIMEOUT_SECONDS=$((TIMEOUT_MINUTES * 60))
-CHECK_INTERVAL=60
-START_TIME=$(date +%s)
-
-info "========================================"
-info "Monitoring ${#report_ids[@]} replay(s)"
-info "========================================"
-
-while true; do
-  elapsed=$(( $(date +%s) - START_TIME ))
-
-  if [ $elapsed -gt $TIMEOUT_SECONDS ]; then
-    error "Timeout reached (${TIMEOUT_MINUTES}m)"
-    exit 1
+  if wait_for_replay "$name" "$report_id"; then
+    replay_statuses["$name"]="completed"
+  else
+    replay_statuses["$name"]="failed"
   fi
-
-  completed=0
-  total=${#report_ids[@]}
-
-  for name in "${!report_ids[@]}"; do
-    status="${replay_statuses[$name]}"
-    if [ "$status" = "completed" ] || [ "$status" = "failed" ]; then
-      completed=$((completed + 1))
-      continue
-    fi
-
-    rid="${report_ids[$name]}"
-    report=$(speedctl_cmd get report "$rid" 2>/dev/null || echo "")
-
-    if [ -n "$report" ]; then
-      report_status=$(echo "$report" | jq -r '.report.status // "unknown"' 2>/dev/null || echo "unknown")
-      norm=$(echo "$report_status" | tr '[:lower:]' '[:upper:]' | tr ' ' '_')
-      info "  $name: $report_status (${elapsed}s elapsed)"
-
-      case "$norm" in
-        PASSED|MISSED_GOALS)
-          replay_statuses["$name"]="completed"
-          completed=$((completed + 1))
-          ;;
-        ERROR|CANCELED)
-          error "  $name: terminal status $report_status"
-          replay_statuses["$name"]="failed"
-          completed=$((completed + 1))
-          ;;
-      esac
-    else
-      info "  $name: waiting for report... (${elapsed}s elapsed)"
-    fi
-  done
-
-  info "Progress: $completed/$total"
-
-  if [ $completed -eq $total ]; then
-    break
-  fi
-
-  sleep $CHECK_INTERVAL
 done
 
 # --- summary ---
