@@ -43,9 +43,37 @@ spec:
             requests:
               cpu: 300m
               memory: 512M
+        collector:
+          resources:
+            limits:
+              cpu: 300m
+              memory: 250M
+            requests:
+              cpu: 100m
+              memory: 128M
         logLevel: debug
         operator:
           test_prep_timeout: 20m
+        replayComponents:
+          redis:
+            podSecurityContext:
+              fsGroup: 999
+              runAsGroup: 999
+              runAsNonRoot: true
+              runAsUser: 999
+            securityContext:
+              readOnlyRootFilesystem: false
+              runAsGroup: 999
+              runAsNonRoot: true
+              runAsUser: 999
+          responder:
+            resources:
+              limits:
+                cpu: 500m
+                memory: 1G
+              requests:
+                cpu: 100m
+                memory: 128M
   destination:
     server: https://kubernetes.default.svc
     namespace: speedscale
