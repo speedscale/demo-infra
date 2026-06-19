@@ -51,3 +51,9 @@
 - **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS after rebasing `demo-daily-workload-replays` onto current `origin/main`; verifier accepts staging snapshots that intentionally use promoted dev snapshot IDs.
 - **Status**: PROVEN
 - **Date**: 2026-06-19
+
+## DLP subsets no longer redact internal replay JWTs
+- **Level**: Integration
+- **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS; every DLP transform chain has an explicit subset filter, session tagging targets inbound JWTs, and Authorization redaction targets outbound traffic while excluding internal service calls.
+- **Status**: PROVEN
+- **Date**: 2026-06-19

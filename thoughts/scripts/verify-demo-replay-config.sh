@@ -11,8 +11,19 @@ bash -n quality/scripts/run-proxymock-scenario.sh
 jq empty quality/dlp/banking-app-keys.json
 jq empty quality/test-configs/banking-daily-replay.json
 
-if jq -e '.transforms[] | select(has("filters"))' quality/dlp/banking-app-keys.json >/dev/null; then
-  echo "FAIL: DLP transform chains should omit filters when they apply to all traffic"
+if jq -e '.transforms[] | select((.filters.filters | length) == 0)' quality/dlp/banking-app-keys.json >/dev/null; then
+  echo "FAIL: every DLP transform chain should have an explicit subset filter"
+  exit 1
+fi
+
+if ! jq -e '
+  .transforms[]
+  | select(.extractor.type == "http_req_header")
+  | select(.extractor.config.name == "Authorization")
+  | select(any(.filters.filters[]; .include == true and .direction == "OUT"))
+  | select(any(.filters.filters[]; .operator == "REGEX" and .network_address == "(^banking-|\\.svc|localhost|127\\.0\\.0\\.1)"))
+' quality/dlp/banking-app-keys.json >/dev/null; then
+  echo "FAIL: Authorization DLP must target outbound traffic while excluding internal service calls"
   exit 1
 fi
 
