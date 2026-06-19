@@ -52,8 +52,8 @@
 - **Status**: PROVEN
 - **Date**: 2026-06-19
 
-## DLP subsets no longer redact internal replay JWTs
+## Replay auth uses JWT resigning instead of DLP exceptions
 - **Level**: Integration
-- **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS; every DLP transform chain has an explicit subset filter, session tagging targets inbound JWTs, Authorization redaction targets outbound traffic while excluding internal service calls, and the replay runner syncs `banking-app-keys` before replay.
+- **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS; `banking-jwt-resign` applies `jwt_resign` to inbound Authorization headers using `${{secret:banking-jwt-secret/secret}}`, and the replay runner syncs and attaches that transform to each selected snapshot before replay. DLP remains scoped to session tagging and sensitive outbound credentials.
 - **Status**: PROVEN
 - **Date**: 2026-06-19

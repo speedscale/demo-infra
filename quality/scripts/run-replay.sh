@@ -17,6 +17,8 @@ if [ -z "$CLUSTER_NAME" ]; then
 fi
 
 REPLAY_DIR="$REPO_ROOT/quality/speedctl-replay"
+JWT_TRANSFORM_ID="banking-jwt-resign"
+JWT_TRANSFORM_FILE="$REPO_ROOT/quality/transforms/${JWT_TRANSFORM_ID}.json"
 
 declare -a speedctl_args
 if [ -n "${SPEEDCTL_CONFIG:-}" ]; then
@@ -37,12 +39,16 @@ info "Connecting to cluster: $CLUSTER_NAME"
 "$SCRIPT_DIR/connect-cluster.sh" "$CLUSTER_NAME"
 
 info "Setting up speedctl"
-mkdir -p "${SPEEDCTL_HOME:-$HOME/.speedscale}"
-SPEEDCTL_HOME="${SPEEDCTL_HOME:-$HOME/.speedscale}"
+SPEEDSCALE_HOME="${SPEEDSCALE_HOME:-${SPEEDCTL_HOME:-$HOME/.speedscale}}"
+export SPEEDSCALE_HOME
+mkdir -p "$SPEEDSCALE_HOME"
 speedctl_cmd check
 
 info "Syncing banking DLP rule"
 speedctl_cmd put dlp-config "$REPO_ROOT/quality/dlp/banking-app-keys.json"
+
+info "Syncing banking JWT resign transform"
+speedctl_cmd put transform "$JWT_TRANSFORM_FILE"
 
 info "Syncing daily replay test config"
 speedctl_cmd put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"
@@ -76,6 +82,43 @@ declare -A replay_statuses
 get_config_value() {
   local file=$1 key=$2
   awk -v k="$key" '$1==k":" {gsub(/["'"'"']/, "", $2); print $2; exit}' "$file"
+}
+
+ensure_snapshot_jwt_resign() {
+  local snapshot_id=$1
+  local current snapshot_file updated
+
+  current=$(mktemp)
+  updated=$(mktemp)
+  snapshot_file="$SPEEDSCALE_HOME/data/snapshots/${snapshot_id}.json"
+
+  speedctl_cmd get snapshot "$snapshot_id" > "$current"
+
+  if jq -e --arg id "$JWT_TRANSFORM_ID" '
+    .tokenConfigId == $id
+    and .tokenizerConfig.id == $id
+    and any((.tokenizerConfig.generator // [])[]; any(.transforms[]?; .type == "jwt_resign"))
+  ' "$current" >/dev/null; then
+    rm -f "$current" "$updated"
+    return 0
+  fi
+
+  speedctl_cmd pull snapshot "$snapshot_id"
+
+  if [ ! -f "$snapshot_file" ]; then
+    rm -f "$current" "$updated"
+    error "Pulled snapshot metadata not found: $snapshot_file"
+    return 1
+  fi
+
+  jq --slurpfile transform "$JWT_TRANSFORM_FILE" '
+    .tokenConfigId = $transform[0].id
+    | .tokenizerConfig = $transform[0]
+  ' "$snapshot_file" > "$updated"
+
+  mv "$updated" "$snapshot_file"
+  speedctl_cmd push snapshot "$snapshot_id" --no-analyze --force
+  rm -f "$current" "$updated"
 }
 
 wait_for_replay() {
@@ -145,6 +188,9 @@ for f in "${replay_files[@]}"; do
     error "Build tag is too long (${#build_tag} chars): $build_tag"
     exit 1
   fi
+
+  info "Ensuring JWT resign transform on snapshot $snapshot_id"
+  ensure_snapshot_jwt_resign "$snapshot_id"
 
   info "Launching replay: $name (workload=$workload, ns=$namespace, snapshot=$snapshot_id, tag=$build_tag)"
 

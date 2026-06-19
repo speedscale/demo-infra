@@ -1,0 +1,30 @@
+{
+  "id": "banking-jwt-resign",
+  "name": "banking-jwt-resign",
+  "generator": [
+    {
+      "filters": {
+        "filters": [
+          {
+            "include": true,
+            "direction": "IN"
+          }
+        ]
+      },
+      "extractor": {
+        "type": "http_req_header",
+        "config": {
+          "name": "Authorization"
+        }
+      },
+      "transforms": [
+        {
+          "type": "jwt_resign",
+          "config": {
+            "secretPath": "${{secret:banking-jwt-secret/secret}}"
+          }
+        }
+      ]
+    }
+  ]
+}

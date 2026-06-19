@@ -10,6 +10,7 @@ bash -n quality/scripts/run-replay.sh
 bash -n quality/scripts/run-proxymock-scenario.sh
 jq empty quality/dlp/banking-app-keys.json
 jq empty quality/test-configs/banking-daily-replay.json
+jq empty quality/transforms/banking-jwt-resign.json
 
 if jq -e '.transforms[] | select((.filters.filters | length) == 0)' quality/dlp/banking-app-keys.json >/dev/null; then
   echo "FAIL: every DLP transform chain should have an explicit subset filter"
@@ -130,10 +131,40 @@ grep -q 'speedctl_args=(--config "$SPEEDCTL_CONFIG")' quality/scripts/run-replay
   exit 1
 }
 
+grep -q 'export SPEEDSCALE_HOME' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner does not export SPEEDSCALE_HOME for local snapshot metadata"
+  exit 1
+}
+
 grep -q 'speedctl_cmd put dlp-config "$REPO_ROOT/quality/dlp/banking-app-keys.json"' quality/scripts/run-replay.sh || {
   echo "FAIL: replay runner does not sync banking-app-keys DLP"
   exit 1
 }
+
+grep -q 'speedctl_cmd put transform "$JWT_TRANSFORM_FILE"' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner does not sync banking-jwt-resign transform"
+  exit 1
+}
+
+grep -q 'ensure_snapshot_jwt_resign "$snapshot_id"' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner does not attach JWT resign transform before replay"
+  exit 1
+}
+
+grep -q 'speedctl_cmd pull snapshot "$snapshot_id"' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner does not pull snapshot metadata before attaching JWT resign transform"
+  exit 1
+}
+
+grep -q 'speedctl_cmd push snapshot "$snapshot_id" --no-analyze --force' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner should push JWT metadata without requesting snapshot analysis"
+  exit 1
+}
+
+if grep -q 'speedctl_cmd put snapshot' quality/scripts/run-replay.sh; then
+  echo "FAIL: replay runner should not use put snapshot because it re-runs snapshot analysis"
+  exit 1
+fi
 
 grep -q 'speedctl_cmd put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"' quality/scripts/run-replay.sh || {
   echo "FAIL: replay runner does not sync banking-daily-replay"
@@ -284,6 +315,21 @@ if jq -e '
   exit 1
 fi
 
+jq -e '
+  .id == "banking-jwt-resign"
+  and .name == "banking-jwt-resign"
+  and (.generator | length == 1)
+  and .generator[0].extractor.type == "http_req_header"
+  and .generator[0].extractor.config.name == "Authorization"
+  and any(.generator[0].filters.filters[]; .include == true and .direction == "IN")
+  and (.generator[0].transforms | length == 1)
+  and .generator[0].transforms[0].type == "jwt_resign"
+  and .generator[0].transforms[0].config.secretPath == "${{secret:banking-jwt-secret/secret}}"
+' quality/transforms/banking-jwt-resign.json >/dev/null || {
+  echo "FAIL: banking-jwt-resign must re-sign inbound Authorization JWTs with the banking JWT secret"
+  exit 1
+}
+
 for cluster in dev-decoy staging-decoy; do
   app="clusters/${cluster}/argocd/microsvc-replay.yaml"
   grep -q 'path: kubernetes/overlays/replay' "$app" || {
@@ -302,4 +348,4 @@ for cluster in dev-decoy staging-decoy; do
   }
 done
 
-echo "PASS: demo replay config covers 7 workloads, proxymock CI, build tags, banking-replay, and JWT-claim session DLP"
+echo "PASS: demo replay config covers 7 workloads, proxymock CI, build tags, banking-replay, DLP session tagging, and JWT resigning"
