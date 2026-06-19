@@ -54,6 +54,6 @@
 
 ## DLP subsets no longer redact internal replay JWTs
 - **Level**: Integration
-- **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS; every DLP transform chain has an explicit subset filter, session tagging targets inbound JWTs, and Authorization redaction targets outbound traffic while excluding internal service calls.
+- **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS; every DLP transform chain has an explicit subset filter, session tagging targets inbound JWTs, Authorization redaction targets outbound traffic while excluding internal service calls, and the replay runner syncs `banking-app-keys` before replay.
 - **Status**: PROVEN
 - **Date**: 2026-06-19

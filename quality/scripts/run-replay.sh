@@ -41,6 +41,9 @@ mkdir -p "${SPEEDCTL_HOME:-$HOME/.speedscale}"
 SPEEDCTL_HOME="${SPEEDCTL_HOME:-$HOME/.speedscale}"
 speedctl_cmd check
 
+info "Syncing banking DLP rule"
+speedctl_cmd put dlp "$REPO_ROOT/quality/dlp/banking-app-keys.json"
+
 info "Syncing daily replay test config"
 speedctl_cmd put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"
 
