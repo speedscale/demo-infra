@@ -62,6 +62,7 @@ namespace=$(get_config_value "$CONFIG_FILE" "namespace")
 snapshot_id=$(get_config_value "$CONFIG_FILE" "snapshotID")
 dev_snapshot_id=$(get_config_value "$CONFIG_FILE" "devSnapshotID")
 staging_snapshot_id=$(get_config_value "$CONFIG_FILE" "stagingSnapshotID")
+proxymock_snapshot_id=$(get_config_value "$CONFIG_FILE" "proxymockSnapshotID")
 service=$(get_config_value "$CONFIG_FILE" "service")
 service_port=$(get_config_value "$CONFIG_FILE" "servicePort")
 local_port=$(get_config_value "$CONFIG_FILE" "localPort")
@@ -75,6 +76,8 @@ case "$CLUSTER_NAME" in
     [ -n "$staging_snapshot_id" ] && snapshot_id="$staging_snapshot_id"
     ;;
 esac
+
+[ -n "$proxymock_snapshot_id" ] && snapshot_id="$proxymock_snapshot_id"
 
 if [ -z "$name" ] || [ -z "$namespace" ] || [ -z "$snapshot_id" ] || [ -z "$service" ] || [ -z "$service_port" ] || [ -z "$local_port" ] || [ -z "$target" ]; then
   echo "Replay config is missing required proxymock fields: $CONFIG_FILE"
