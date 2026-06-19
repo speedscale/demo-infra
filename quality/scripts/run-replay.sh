@@ -184,6 +184,8 @@ wait_for_replay() {
   local timeout_minutes=${REPLAY_TIMEOUT_MINUTES:-30}
   local timeout_seconds=$((timeout_minutes * 60))
   local check_interval=${REPLAY_CHECK_INTERVAL:-60}
+  local error_grace_minutes=${REPLAY_ERROR_GRACE_MINUTES:-15}
+  local error_grace_seconds=$((error_grace_minutes * 60))
   local start_time elapsed report report_status norm
 
   start_time=$(date +%s)
@@ -206,9 +208,17 @@ wait_for_replay() {
         PASSED|MISSED_GOALS)
           return 0
           ;;
-        *ERROR*|CANCELED|*CANCEL*)
+        CANCELED|*CANCEL*)
           error "  $name: terminal status $report_status"
           return 1
+          ;;
+        *ERROR*)
+          if [ $elapsed -lt $error_grace_seconds ]; then
+            warn "  $name: status $report_status before ${error_grace_minutes}m grace; continuing"
+          else
+            error "  $name: terminal status $report_status"
+            return 1
+          fi
           ;;
       esac
     else

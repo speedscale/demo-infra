@@ -88,6 +88,12 @@
 - **Status**: OPEN
 - **Date**: 2026-06-19
 
+## Replay runner tolerates transient report Error status
+- **Level**: Integration
+- **Evidence**: Main run `27836162899` failed `banking-accounts` when report `9499ef1c-35fb-4216-9817-3cd9a7610384` briefly returned `Error` after the 5-minute tracker timeout, but the same report later completed as `Missed Goals` with replay traffic and analysis. `thoughts/scripts/verify-demo-replay-config.sh` now proves the runner keeps polling through a configurable `REPLAY_ERROR_GRACE_MINUTES` window before treating `Error` as terminal.
+- **Status**: PROVEN
+- **Date**: 2026-06-19
+
 ## Decoy microsvc capture modes are wired correctly
 - **Level**: Integration
 - **Evidence**: thoughts/scripts/verify-decoy-capture-mode.sh

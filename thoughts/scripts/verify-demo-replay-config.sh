@@ -205,6 +205,16 @@ grep -q 'Speedscale test-config $TEST_CONFIG_ID must use DLP config $DLP_CONFIG_
   exit 1
 }
 
+grep -q 'REPLAY_ERROR_GRACE_MINUTES' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner should tolerate transient Speedscale report Error status"
+  exit 1
+}
+
+grep -q 'status $report_status before ${error_grace_minutes}m grace; continuing' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner should keep polling during transient Error grace period"
+  exit 1
+}
+
 grep -q 'speedctl_cmd put dlp-config "$REPO_ROOT/quality/dlp/banking-app-keys.json"' quality/scripts/run-replay.sh || {
   echo "FAIL: replay runner lost the opt-in banking-app-keys DLP sync"
   exit 1
