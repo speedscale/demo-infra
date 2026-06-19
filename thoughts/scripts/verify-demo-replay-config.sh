@@ -14,6 +14,20 @@ if jq -e '.transforms[] | select(has("filters"))' quality/dlp/banking-app-keys.j
   exit 1
 fi
 
+if jq -e '.redactlist.entries.all[] | select(. == "authorization")' quality/dlp/banking-app-keys.json >/dev/null; then
+  echo "FAIL: Authorization must be redacted by the ordered transform, not the global redactlist"
+  exit 1
+fi
+
+if jq -e '
+  .transforms[]
+  | select(.extractor.type == "json_path")
+  | select(.extractor.config.path == "http.req.http.headers[\"Authorization\"][0].jwt.claims.sub")
+' quality/dlp/banking-app-keys.json >/dev/null; then
+  echo "FAIL: JWT claim session path must use RRPair path syntax, not http.req.http"
+  exit 1
+fi
+
 grep -q '^namespace: banking-replay$' quality/speedctl-replay/banking-ai.yaml || {
   echo "FAIL: banking-ai replay config does not target banking-replay"
   exit 1
@@ -25,14 +39,42 @@ grep -q -- '--build-tag "$build_tag"' quality/scripts/run-replay.sh || {
 }
 
 jq -e '
+  [ .transforms | to_entries[] | {
+      index: .key,
+      extractor: .value.extractor,
+      transformTypes: [.value.transforms[].type]
+    }
+  ] as $transforms
+  | ($transforms
+      | map(select(.extractor.type == "json_path"))
+      | map(select(.extractor.config.path == "http.req.headers.Authorization.0.jwt.claims.sub"))
+      | map(select(.extractor.config.regex == "^(?i)Bearer (.*)(?-i)"))
+      | map(select(.transformTypes == ["tag_session"]))
+      | first
+    ) as $sessionTransform
+  | ($transforms
+      | map(select(.extractor.type == "http_req_header"))
+      | map(select(.extractor.config.name == "Authorization"))
+      | map(select(.transformTypes == ["split", "base64", "dlp_field"]))
+      | first
+    ) as $redactTransform
+  | ($sessionTransform != null)
+    and ($redactTransform != null)
+    and ($sessionTransform.index < $redactTransform.index)
+' quality/dlp/banking-app-keys.json >/dev/null || {
+  echo "FAIL: banking-app-keys must tag sessions from Bearer JWT claims.sub before redacting JWTs"
+  exit 1
+}
+
+if jq -e '
   .transforms[]
   | select(.extractor.type == "http_req_header")
   | select(.extractor.config.name == "Authorization")
-  | select(any(.transforms[]; .type == "tag_session"))
-' quality/dlp/banking-app-keys.json >/dev/null || {
-  echo "FAIL: banking-app-keys DLP config does not tag sessions"
+  | select([.transforms[].type] == ["split", "tag_session"])
+' quality/dlp/banking-app-keys.json >/dev/null; then
+  echo "FAIL: banking-app-keys must not tag the raw Authorization bearer token as the session"
   exit 1
-}
+fi
 
 for cluster in dev-decoy staging-decoy; do
   app="clusters/${cluster}/argocd/microsvc-replay.yaml"
@@ -46,4 +88,4 @@ for cluster in dev-decoy staging-decoy; do
   }
 done
 
-echo "PASS: demo replay config uses banking-replay, build tags, and tag_session DLP"
+echo "PASS: demo replay config uses banking-replay, build tags, and JWT-claim session DLP"

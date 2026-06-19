@@ -3,7 +3,6 @@
   "redactlist": {
     "entries": {
       "all": [
-        "authorization",
         "plaid-client-id",
         "plaid-secret",
         "hibp-api-key",
@@ -45,24 +44,15 @@
     },
     {
       "extractor": {
-        "type": "http_req_header",
+        "type": "json_path",
         "config": {
-          "name": "Authorization"
+          "path": "http.req.headers.Authorization.0.jwt.claims.sub",
+          "regex": "^(?i)Bearer (.*)(?-i)"
         }
       },
       "transforms": [
         {
-          "type": "split",
-          "config": {
-            "index": "1",
-            "separator": " "
-          }
-        },
-        {
-          "type": "base64"
-        },
-        {
-          "type": "dlp_field"
+          "type": "tag_session"
         }
       ]
     },
@@ -95,7 +85,10 @@
           }
         },
         {
-          "type": "tag_session"
+          "type": "base64"
+        },
+        {
+          "type": "dlp_field"
         }
       ]
     }
