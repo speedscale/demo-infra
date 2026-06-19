@@ -14,9 +14,29 @@ spec:
         s3:
           bucket: do-nyc1-staging-decoy-byoc
           region: nyc3
+          prefix: byoc
           endpoint: https://nyc3.digitaloceanspaces.com
           forcePathStyle: true
           credentialsSecret: byoc-s3
+        layout:
+          enabled: true
+          workloads:
+            - namespace: banking-app
+              appLabel: banking-accounts
+            - namespace: banking-app
+              appLabel: banking-ai
+            - namespace: banking-app
+              appLabel: banking-fraud
+            - namespace: banking-app
+              appLabel: banking-frontend
+            - namespace: banking-app
+              appLabel: banking-gateway
+            - namespace: banking-app
+              appLabel: banking-notification
+            - namespace: banking-app
+              appLabel: banking-transactions
+            - namespace: banking-app
+              appLabel: banking-user
         irsa:
           enabled: false
   destination:

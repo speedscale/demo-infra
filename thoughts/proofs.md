@@ -87,3 +87,15 @@
 - **Evidence**: Targeted dev report `4080908f-de63-454f-84be-0c95d8b22082` completed with `Missed Goals`, 1.7% success, 17/1023 assertions passed, and 98.3% no-match/status failures. Failures are dominated by 404/500 responses on account list/create/balance endpoints, so the remaining issue is replay state/data and fresh-auth flow alignment, not the service-account upload failure or Redis readiness.
 - **Status**: OPEN
 - **Date**: 2026-06-19
+
+## Decoy microsvc capture modes are wired correctly
+- **Level**: Integration
+- **Evidence**: thoughts/scripts/verify-decoy-capture-mode.sh
+- **Status**: PROVEN
+- **Date**: 2026-06-18
+
+## BYOC OTEL S3 layout renders valid Collector configs
+- **Level**: Integration
+- **Evidence**: thoughts/scripts/verify-byoc-s3-layout.sh
+- **Status**: PROVEN
+- **Date**: 2026-06-19
