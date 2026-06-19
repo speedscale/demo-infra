@@ -31,9 +31,9 @@ AUTH_PASSWORD="${AUTH_PASSWORD:-$(collection_value password)}"
 AUTH_USERNAME="${AUTH_USERNAME:-$(collection_value username)}"
 AUTH_PATH="$(jq -r '.item[] | select(.name == "Login") | "/" + (.request.url.path | join("/"))' "$AUTH_COLLECTION" | head -1)"
 AUTH_BODY_TEMPLATE="$(jq -r '.item[] | select(.name == "Login") | .request.body.raw' "$AUTH_COLLECTION" | head -1)"
-AUTH_REGISTER_PATH="${AUTH_REGISTER_PATH:-/api/users/register}"
-AUTH_EMAIL_DOMAIN="${AUTH_EMAIL_DOMAIN:-northbridge.example}"
 AUTH_REQUEST_TIMEOUT="${AUTH_REQUEST_TIMEOUT:-20}"
+AUTH_PREFLIGHT_RETRIES="${AUTH_PREFLIGHT_RETRIES:-30}"
+AUTH_PREFLIGHT_RETRY_DELAY="${AUTH_PREFLIGHT_RETRY_DELAY:-2}"
 
 if [ -z "$AUTH_PASSWORD" ] || [ -z "$AUTH_USERNAME" ] || [ -z "$AUTH_PATH" ] || [ -z "$AUTH_BODY_TEMPLATE" ]; then
   echo "Postman auth collection is missing username, password, path, or body"
@@ -97,39 +97,36 @@ login_token() {
   printf '%s' "$fresh_token"
 }
 
-register_subject() {
-  local username=$1 email register_body
-  email="${username}@${AUTH_EMAIL_DOMAIN}"
-  register_body=$(jq -nc \
-    --arg username "$username" \
-    --arg email "$email" \
-    --arg password "$AUTH_PASSWORD" \
-    '{username:$username,email:$email,password:$password}')
+login_token_with_retries() {
+  local username=$1 fresh_token attempt
 
-  post_json "${AUTH_BASE_URL%/}$AUTH_REGISTER_PATH" "$register_body"
-  case "$POST_JSON_STATUS" in
-    200|201|400|409) ;;
-    *)
-      echo "Postman auth preflight could not register JWT subject $username: HTTP $POST_JSON_STATUS" >&2
-      return 1
-      ;;
-  esac
+  for attempt in $(seq 1 "$AUTH_PREFLIGHT_RETRIES"); do
+    fresh_token=$(login_token "$username" || true)
+    if [ -n "$fresh_token" ] && [ "$fresh_token" != "null" ]; then
+      printf '%s' "$fresh_token"
+      return 0
+    fi
+
+    if [ "$attempt" -lt "$AUTH_PREFLIGHT_RETRIES" ]; then
+      echo "Postman auth preflight login for $username returned HTTP $POST_JSON_STATUS; retrying ($attempt/$AUTH_PREFLIGHT_RETRIES)" >&2
+      sleep "$AUTH_PREFLIGHT_RETRY_DELAY"
+    fi
+  done
+
+  return 1
 }
 
 FALLBACK_FRESH_TOKEN=
-fallback_token() {
-  local username=$1 fresh_token
+ensure_fallback_token() {
+  local reason=$1 fresh_token
   if [ -z "$FALLBACK_FRESH_TOKEN" ]; then
-    register_subject "$AUTH_USERNAME" || true
-    fresh_token=$(login_token "$AUTH_USERNAME" || true)
+    fresh_token=$(login_token_with_retries "$AUTH_USERNAME" || true)
     if [ -z "$fresh_token" ] || [ "$fresh_token" = "null" ]; then
-      echo "Postman auth preflight could not refresh JWT for $username or fallback user $AUTH_USERNAME: HTTP $POST_JSON_STATUS" >&2
+      echo "Postman auth preflight could not refresh JWT for $reason or fallback user $AUTH_USERNAME: HTTP $POST_JSON_STATUS" >&2
       exit 1
     fi
     FALLBACK_FRESH_TOKEN=$fresh_token
   fi
-
-  echo "Postman auth preflight using fallback token for stale JWT subject $username" >&2
 }
 
 recorded_tokens=$(mktemp)
@@ -147,6 +144,9 @@ if [ ! -s "$recorded_tokens" ]; then
   exit 0
 fi
 
+ensure_fallback_token "fallback user"
+echo "Postman auth preflight fallback token is ready"
+
 token_count=0
 updated=0
 token_map=$(mktemp)
@@ -156,7 +156,6 @@ while IFS= read -r recorded_token || [ -n "$recorded_token" ]; do
   [ -n "$recorded_token" ] || continue
   username=$(decode_jwt_subject "$recorded_token")
   if [ -z "$username" ]; then
-    fallback_token "unreadable JWT subject"
     fresh_token=$FALLBACK_FRESH_TOKEN
     printf '%s\t%s\n' "$recorded_token" "$fresh_token" >> "$token_map"
     token_count=$((token_count + 1))
@@ -166,14 +165,7 @@ while IFS= read -r recorded_token || [ -n "$recorded_token" ]; do
     continue
   fi
 
-  fresh_token=
-  if register_subject "$username"; then
-    fresh_token=$(login_token "$username" || true)
-  fi
-  if [ -z "$fresh_token" ] || [ "$fresh_token" = "null" ]; then
-    fallback_token "$username"
-    fresh_token=$FALLBACK_FRESH_TOKEN
-  fi
+  fresh_token=$FALLBACK_FRESH_TOKEN
 
   printf '%s\t%s\n' "$recorded_token" "$fresh_token" >> "$token_map"
   token_count=$((token_count + 1))
