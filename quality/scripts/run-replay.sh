@@ -17,8 +17,11 @@ if [ -z "$CLUSTER_NAME" ]; then
 fi
 
 REPLAY_DIR="$REPO_ROOT/quality/speedctl-replay"
+DLP_CONFIG_ID="banking-app-keys"
+TEST_CONFIG_ID="banking-daily-replay"
 JWT_TRANSFORM_ID="banking-jwt-resign"
 JWT_TRANSFORM_FILE="$REPO_ROOT/quality/transforms/${JWT_TRANSFORM_ID}.json"
+SYNC_SPEEDSCALE_ARTIFACTS="${SYNC_SPEEDSCALE_ARTIFACTS:-false}"
 
 declare -a speedctl_args
 if [ -n "${SPEEDCTL_CONFIG:-}" ]; then
@@ -34,6 +37,47 @@ info()  { echo -e "\033[36m$*\033[0m"; }
 warn()  { echo -e "\033[33m$*\033[0m"; }
 error() { echo -e "\033[31m$*\033[0m"; }
 
+sync_enabled() {
+  case "$SYNC_SPEEDSCALE_ARTIFACTS" in
+    true|TRUE|1|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+require_cloud_artifact() {
+  local kind=$1 id=$2
+
+  if ! speedctl_cmd get "$kind" "$id" >/dev/null; then
+    error "Required Speedscale $kind not found or not readable: $id"
+    error "Run with SYNC_SPEEDSCALE_ARTIFACTS=true using a user/admin key to upload replay artifacts."
+    return 1
+  fi
+}
+
+require_test_config() {
+  local current
+  current=$(mktemp)
+
+  if ! speedctl_cmd get test-config "$TEST_CONFIG_ID" > "$current"; then
+    rm -f "$current"
+    error "Required Speedscale test-config not found or not readable: $TEST_CONFIG_ID"
+    error "Run with SYNC_SPEEDSCALE_ARTIFACTS=true using a user/admin key to upload replay artifacts."
+    return 1
+  fi
+
+  if ! jq -e --arg id "$DLP_CONFIG_ID" '
+    .generator.dlpConfigId == $id
+    and .responder.dlpConfigId == $id
+  ' "$current" >/dev/null; then
+    rm -f "$current"
+    error "Speedscale test-config $TEST_CONFIG_ID must use DLP config $DLP_CONFIG_ID for generator and responder."
+    error "Run with SYNC_SPEEDSCALE_ARTIFACTS=true using a user/admin key to update replay artifacts."
+    return 1
+  fi
+
+  rm -f "$current"
+}
+
 # --- connect ---
 info "Connecting to cluster: $CLUSTER_NAME"
 "$SCRIPT_DIR/connect-cluster.sh" "$CLUSTER_NAME"
@@ -44,14 +88,21 @@ export SPEEDSCALE_HOME
 mkdir -p "$SPEEDSCALE_HOME"
 speedctl_cmd check
 
-info "Syncing banking DLP rule"
-speedctl_cmd put dlp-config "$REPO_ROOT/quality/dlp/banking-app-keys.json"
+if sync_enabled; then
+  info "Syncing banking DLP rule"
+  speedctl_cmd put dlp-config "$REPO_ROOT/quality/dlp/banking-app-keys.json"
 
-info "Syncing banking JWT resign transform"
-speedctl_cmd put transform "$JWT_TRANSFORM_FILE"
+  info "Syncing banking JWT resign transform"
+  speedctl_cmd put transform "$JWT_TRANSFORM_FILE"
 
-info "Syncing daily replay test config"
-speedctl_cmd put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"
+  info "Syncing daily replay test config"
+  speedctl_cmd put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"
+else
+  info "Validating banking replay artifacts"
+  require_cloud_artifact dlp-config "$DLP_CONFIG_ID"
+  require_cloud_artifact transform "$JWT_TRANSFORM_ID"
+  require_test_config
+fi
 
 # --- collect replay configs ---
 declare -a replay_files
@@ -101,6 +152,13 @@ ensure_snapshot_jwt_resign() {
   ' "$current" >/dev/null; then
     rm -f "$current" "$updated"
     return 0
+  fi
+
+  if ! sync_enabled; then
+    rm -f "$current" "$updated"
+    error "Snapshot $snapshot_id is missing the $JWT_TRANSFORM_ID JWT resign transform."
+    error "Run with SYNC_SPEEDSCALE_ARTIFACTS=true using a user/admin key to attach replay transforms."
+    return 1
   fi
 
   speedctl_cmd pull snapshot "$snapshot_id"

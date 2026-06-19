@@ -14,6 +14,43 @@ jq empty quality/test-configs/banking-daily-replay.json
 jq empty quality/transforms/banking-jwt-resign.json
 jq empty quality/postman/banking-auth.postman_collection.json
 
+jq -e '
+  .generator.dlpConfigId == "banking-app-keys"
+  and .responder.dlpConfigId == "banking-app-keys"
+' quality/test-configs/banking-daily-replay.json >/dev/null || {
+  echo "FAIL: banking-daily-replay must use banking-app-keys for generator and responder DLP"
+  exit 1
+}
+
+jq -e '
+  .cluster.responderResources.requests.cpu == "100m"
+  and .cluster.responderResources.requests.memory == "134217728"
+  and .cluster.responderResources.limits.cpu == "500m"
+  and .cluster.responderResources.limits.memory == "1073741824"
+' quality/test-configs/banking-daily-replay.json >/dev/null || {
+  echo "FAIL: banking-daily-replay should keep responder resources small enough for demo clusters"
+  exit 1
+}
+
+for cluster_config in clusters/dev-decoy/argocd/speedscale-operator.yaml clusters/staging-decoy/argocd/speedscale-operator.yaml; do
+  grep -q 'collector:' "$cluster_config" || {
+    echo "FAIL: $cluster_config should override replay collector resources"
+    exit 1
+  }
+  grep -q 'cpu: 100m' "$cluster_config" || {
+    echo "FAIL: $cluster_config should lower replay component CPU requests"
+    exit 1
+  }
+  grep -q 'runAsUser: 999' "$cluster_config" || {
+    echo "FAIL: $cluster_config should run replay Redis as the image redis user"
+    exit 1
+  }
+  grep -q 'fsGroup: 999' "$cluster_config" || {
+    echo "FAIL: $cluster_config should allow replay Redis to write /data without root"
+    exit 1
+  }
+done
+
 if jq -e '.transforms[] | select((.filters.filters | length) == 0)' quality/dlp/banking-app-keys.json >/dev/null; then
   echo "FAIL: every DLP transform chain should have an explicit subset filter"
   exit 1
@@ -138,28 +175,68 @@ grep -q 'export SPEEDSCALE_HOME' quality/scripts/run-replay.sh || {
   exit 1
 }
 
+grep -q 'SYNC_SPEEDSCALE_ARTIFACTS="${SYNC_SPEEDSCALE_ARTIFACTS:-false}"' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner must default artifact syncing off for service-account CI"
+  exit 1
+}
+
+grep -q 'sync_enabled' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner does not gate artifact syncing behind sync_enabled"
+  exit 1
+}
+
+grep -q 'require_cloud_artifact dlp-config "$DLP_CONFIG_ID"' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner should validate existing DLP config when syncing is disabled"
+  exit 1
+}
+
+grep -q 'require_cloud_artifact transform "$JWT_TRANSFORM_ID"' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner should validate existing JWT transform when syncing is disabled"
+  exit 1
+}
+
+grep -q 'require_test_config' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner should validate existing test config content when syncing is disabled"
+  exit 1
+}
+
+grep -q 'Speedscale test-config $TEST_CONFIG_ID must use DLP config $DLP_CONFIG_ID' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner should fail clearly when cloud test config DLP drifts"
+  exit 1
+}
+
 grep -q 'speedctl_cmd put dlp-config "$REPO_ROOT/quality/dlp/banking-app-keys.json"' quality/scripts/run-replay.sh || {
-  echo "FAIL: replay runner does not sync banking-app-keys DLP"
+  echo "FAIL: replay runner lost the opt-in banking-app-keys DLP sync"
   exit 1
 }
 
 grep -q 'speedctl_cmd put transform "$JWT_TRANSFORM_FILE"' quality/scripts/run-replay.sh || {
-  echo "FAIL: replay runner does not sync banking-jwt-resign transform"
+  echo "FAIL: replay runner lost the opt-in banking-jwt-resign transform sync"
+  exit 1
+}
+
+grep -q 'speedctl_cmd put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"' quality/scripts/run-replay.sh || {
+  echo "FAIL: replay runner lost the opt-in banking-daily-replay sync"
   exit 1
 }
 
 grep -q 'ensure_snapshot_jwt_resign "$snapshot_id"' quality/scripts/run-replay.sh || {
-  echo "FAIL: replay runner does not attach JWT resign transform before replay"
+  echo "FAIL: replay runner does not attach or validate JWT resign transform before replay"
+  exit 1
+}
+
+grep -q 'Snapshot $snapshot_id is missing the $JWT_TRANSFORM_ID JWT resign transform' quality/scripts/run-replay.sh || {
+  echo "FAIL: read-only replay runner should fail clearly when snapshot transform metadata is missing"
   exit 1
 }
 
 grep -q 'speedctl_cmd pull snapshot "$snapshot_id"' quality/scripts/run-replay.sh || {
-  echo "FAIL: replay runner does not pull snapshot metadata before attaching JWT resign transform"
+  echo "FAIL: replay runner lost opt-in snapshot metadata pull before attaching JWT resign transform"
   exit 1
 }
 
 grep -q 'speedctl_cmd push snapshot "$snapshot_id" --no-analyze --force' quality/scripts/run-replay.sh || {
-  echo "FAIL: replay runner should push JWT metadata without requesting snapshot analysis"
+  echo "FAIL: replay runner should push JWT metadata without requesting snapshot analysis only when syncing is enabled"
   exit 1
 }
 
@@ -168,10 +245,10 @@ if grep -q 'speedctl_cmd put snapshot' quality/scripts/run-replay.sh; then
   exit 1
 fi
 
-grep -q 'speedctl_cmd put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"' quality/scripts/run-replay.sh || {
-  echo "FAIL: replay runner does not sync banking-daily-replay"
+if grep -q 'SYNC_SPEEDSCALE_ARTIFACTS: true' .github/workflows/quality-post-deploy.yaml; then
+  echo "FAIL: post-deploy quality workflow must not sync Speedscale artifacts with service-account CI keys"
   exit 1
-}
+fi
 
 grep -q 'proxymock cloud pull snapshot "$snapshot_id"' quality/scripts/run-proxymock-scenario.sh || {
   echo "FAIL: proxymock runner does not pull snapshots from Speedscale Cloud"
@@ -390,4 +467,4 @@ for cluster in dev-decoy staging-decoy; do
   }
 done
 
-echo "PASS: demo replay config covers 7 workloads, proxymock CI, Postman auth preflight, build tags, banking-replay, DLP session tagging, and JWT resigning"
+echo "PASS: demo replay config covers 7 workloads, read-only CI replay, proxymock CI, Postman auth preflight, build tags, banking-replay, DLP session tagging, and JWT resigning"

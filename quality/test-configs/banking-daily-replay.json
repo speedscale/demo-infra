@@ -9,6 +9,7 @@
         }
       }
     ],
+    "dlpConfigId": "banking-app-keys",
     "evaluationIntervals": 5
   },
   "rules": [
@@ -33,7 +34,8 @@
     "numReplicas": 1,
     "responseDelay": {
       "mode": "RECORDED"
-    }
+    },
+    "dlpConfigId": "banking-app-keys"
   },
   "cluster": {
     "cleanup": "inventory",
@@ -43,10 +45,12 @@
     "logsCollected": true,
     "responderResources": {
       "limits": {
-        "memory": "2684354560"
+        "cpu": "500m",
+        "memory": "1073741824"
       },
       "requests": {
-        "memory": "268435456"
+        "cpu": "100m",
+        "memory": "134217728"
       }
     }
   }

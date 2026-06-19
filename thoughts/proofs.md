@@ -63,3 +63,27 @@
 - **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS; `quality/postman/banking-auth.postman_collection.json` defines the login request, and `quality/scripts/run-proxymock-scenario.sh` runs that preflight through `banking-gateway` before replacing each recorded banking JWT subject with a fresh login token for the same subject.
 - **Status**: PROVEN
 - **Date**: 2026-06-19
+
+## CI replay uses read-only Speedscale operations by default
+- **Level**: Integration
+- **Evidence**: Post-merge run `27832007304` failed in `trigger-quality / replay (staging-decoy)` because `speedctl put dlp-config` returned `PermissionDenied: service account keys cannot be used for this action`; `thoughts/scripts/verify-demo-replay-config.sh` now proves `run-replay.sh` defaults `SYNC_SPEEDSCALE_ARTIFACTS=false`, validates existing artifacts with `speedctl get`, and keeps artifact uploads behind explicit opt-in.
+- **Status**: PROVEN
+- **Date**: 2026-06-19
+
+## Daily replay test config pins banking DLP
+- **Level**: Integration
+- **Evidence**: Post-merge dev report `c3179fe1-17d0-4967-94ad-da8face1d1c1` used `decoy-email-2` because the cloud `banking-daily-replay` test config had no explicit DLP config; `thoughts/scripts/verify-demo-replay-config.sh` now proves the repo config sets `banking-app-keys` for generator and responder and the read-only runner rejects drifted cloud test configs.
+- **Status**: PROVEN
+- **Date**: 2026-06-19
+
+## Banking accounts replay failure is replay infrastructure, not auth
+- **Level**: Live replay
+- **Evidence**: Targeted dev report `6f552a27-887f-4d74-9a26-f28d85d338b3` used `banking-app-keys` but still failed during initialization; Kubernetes events showed responder/collector scheduling pressure, and responder logs showed Redis write failure: `/data` RDB temp file permission denied caused `MISCONF` and responder crashloop. Repo config now lowers replay resource requests and runs replay Redis as the image-owned non-root UID 999. After applying the equivalent dev operator settings, targeted report `4080908f-de63-454f-84be-0c95d8b22082` completed replay execution instead of ending in infrastructure `Error`.
+- **Status**: PROVEN
+- **Date**: 2026-06-19
+
+## Banking accounts replay quality still needs data/auth repair
+- **Level**: Live replay
+- **Evidence**: Targeted dev report `4080908f-de63-454f-84be-0c95d8b22082` completed with `Missed Goals`, 1.7% success, 17/1023 assertions passed, and 98.3% no-match/status failures. Failures are dominated by 404/500 responses on account list/create/balance endpoints, so the remaining issue is replay state/data and fresh-auth flow alignment, not the service-account upload failure or Redis readiness.
+- **Status**: OPEN
+- **Date**: 2026-06-19
