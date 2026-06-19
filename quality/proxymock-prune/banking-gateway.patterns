@@ -4,3 +4,8 @@
 2026-06-18_22-41-51.778955419Z.md
 2026-06-18_22-43-13.629623569Z.md
 2026-06-18_22-43-30.323430465Z.md
+GET http://banking-gateway:8080/api/users/check-email
+POST http://banking-gateway:8080/api/accounts HTTP/1.1
+GET http://banking-gateway:8080/api/accounts HTTP/1.1
+POST http://banking-gateway:8080/api/users/login HTTP/1.1
+POST http://banking-gateway:8080/api/users/register HTTP/1.1

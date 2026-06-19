@@ -58,6 +58,7 @@ runner_temp="${RUNNER_TEMP:-/tmp}"
 snapshot_dir="$runner_temp/proxymock/${name}/snapshot"
 result_dir="$runner_temp/proxymock/${name}/results"
 report_dir="$REPO_ROOT/quality/proxymock-reports/${CLUSTER_NAME}"
+rm -rf "$snapshot_dir" "$result_dir"
 mkdir -p "$snapshot_dir" "$result_dir" "$report_dir"
 prune_file="$REPO_ROOT/quality/proxymock-prune/${name}.patterns"
 
