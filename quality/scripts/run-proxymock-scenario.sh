@@ -59,6 +59,7 @@ snapshot_dir="$runner_temp/proxymock/${name}/snapshot"
 result_dir="$runner_temp/proxymock/${name}/results"
 report_dir="$REPO_ROOT/quality/proxymock-reports/${CLUSTER_NAME}"
 mkdir -p "$snapshot_dir" "$result_dir" "$report_dir"
+prune_file="$REPO_ROOT/quality/proxymock-prune/${name}.patterns"
 
 info "Connecting to cluster: $CLUSTER_NAME"
 "$SCRIPT_DIR/connect-cluster.sh" "$CLUSTER_NAME"
@@ -67,6 +68,26 @@ info "Pulling snapshot: $snapshot_id"
 proxymock cloud pull snapshot "$snapshot_id" \
   --config "$SPEEDCTL_HOME/config.yaml" \
   --out "$snapshot_dir"
+
+if [ -f "$prune_file" ]; then
+  info "Pruning proxymock requests listed in $prune_file"
+  prune_count=0
+  while IFS= read -r pattern || [ -n "$pattern" ]; do
+    case "$pattern" in
+      ""|\#*) continue ;;
+    esac
+
+    while IFS= read -r rrpair_file; do
+      [ -f "$rrpair_file" ] || continue
+      if [[ ! "$rrpair_file" =~ $pattern ]] && ! rg -q -- "$pattern" "$rrpair_file"; then
+        continue
+      fi
+      rm "$rrpair_file"
+      prune_count=$((prune_count + 1))
+    done < <(find "$snapshot_dir" -type f)
+  done < "$prune_file"
+  info "Pruned $prune_count request(s)"
+fi
 
 info "Forwarding $namespace/$service:$service_port to localhost:$local_port"
 if ! kubectl -n "$namespace" wait --for=condition=available "deployment/$service" --timeout=5m; then
@@ -106,6 +127,12 @@ if [ -d "$result_dir" ] && [ "$(find "$result_dir" -type f | wc -l | tr -d ' ')"
     --config "$SPEEDCTL_HOME/config.yaml" \
     --in "$result_dir" \
     --out "$report_dir/${name}.json"
+
+  server_errors=$(jq '[.reliability.statusBreakdown[]? | select(.bucket == "5xx") | .count] | add // 0' "$report_dir/${name}.json")
+  if [ "$server_errors" -gt 0 ]; then
+    echo "Proxymock report contains $server_errors 5xx response(s)"
+    exit 1
+  fi
 else
   warn "No proxymock results written for $name"
 fi
