@@ -130,7 +130,7 @@ grep -q 'speedctl_args=(--config "$SPEEDCTL_CONFIG")' quality/scripts/run-replay
   exit 1
 }
 
-grep -q 'speedctl_cmd put dlp "$REPO_ROOT/quality/dlp/banking-app-keys.json"' quality/scripts/run-replay.sh || {
+grep -q 'speedctl_cmd put dlp-config "$REPO_ROOT/quality/dlp/banking-app-keys.json"' quality/scripts/run-replay.sh || {
   echo "FAIL: replay runner does not sync banking-app-keys DLP"
   exit 1
 }
