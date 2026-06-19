@@ -2,7 +2,8 @@
 
 ## High Priority
 
-- Add a first-class replay auth token provider that bridges DLP and replay auth: extract non-sensitive identity claims before redaction, then generate fresh per-session tokens during replay.
+- Add a first-class replay auth token provider for normal captured traffic with expired, malformed-signature, or otherwise replay-invalid tokens. It should bridge DLP and replay auth by extracting non-sensitive identity claims before redaction, then generating fresh per-session tokens during replay.
+- Replay should preserve auth intent instead of requiring teams to filter out, hand-edit, or de-redact captured Authorization traffic.
 - Replay setup should recommend `jwt_resign` when captured inbound Authorization JWTs are expired or likely to expire before replay. DLP redaction should not be presented as the auth repair path.
 - The replay CLI should expose a direct JWT resign option instead of requiring snapshot metadata mutation before `infra replay`.
 - DLP recommendations should warn when Authorization redaction would replace a parsable JWT with an opaque placeholder and make JWT resigning impossible.
