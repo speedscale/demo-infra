@@ -73,20 +73,47 @@ proxymock cloud pull snapshot "$snapshot_id" \
 if [ -f "$prune_file" ]; then
   info "Pruning proxymock requests listed in $prune_file"
   prune_count=0
+  prune_names_file="$runner_temp/${name}-prune-names.txt"
+  prune_patterns_file="$runner_temp/${name}-prune-patterns.txt"
+  : >"$prune_names_file"
+  : >"$prune_patterns_file"
+
   while IFS= read -r pattern || [ -n "$pattern" ]; do
     case "$pattern" in
       ""|\#*) continue ;;
     esac
 
-    while IFS= read -r rrpair_file; do
-      [ -f "$rrpair_file" ] || continue
-      if [[ ! "$rrpair_file" =~ $pattern ]] && ! rg -q -- "$pattern" "$rrpair_file"; then
-        continue
-      fi
+    case "$pattern" in
+      *.md|*.json)
+        echo "$pattern" >>"$prune_names_file"
+        ;;
+      *)
+        echo "$pattern" >>"$prune_patterns_file"
+        ;;
+    esac
+  done < "$prune_file"
+
+  while IFS= read -r rrpair_file; do
+    [ -f "$rrpair_file" ] || continue
+    rrpair_name=$(basename "$rrpair_file")
+
+    if grep -Fxq -- "$rrpair_name" "$prune_names_file"; then
       rm "$rrpair_file"
       prune_count=$((prune_count + 1))
-    done < <(find "$snapshot_dir" -type f)
-  done < "$prune_file"
+      continue
+    fi
+
+    if [ -s "$prune_patterns_file" ]; then
+      while IFS= read -r pattern || [ -n "$pattern" ]; do
+        if [[ "$rrpair_file" =~ $pattern ]] || rg -q -- "$pattern" "$rrpair_file"; then
+          rm "$rrpair_file"
+          prune_count=$((prune_count + 1))
+          break
+        fi
+      done < "$prune_patterns_file"
+    fi
+  done < <(find "$snapshot_dir" -type f)
+
   info "Pruned $prune_count request(s)"
 fi
 
