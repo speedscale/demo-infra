@@ -102,7 +102,7 @@ wait_for_replay() {
         PASSED|MISSED_GOALS)
           return 0
           ;;
-        ERROR|CANCELED)
+        *ERROR*|CANCELED|*CANCEL*)
           error "  $name: terminal status $report_status"
           return 1
           ;;

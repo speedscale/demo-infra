@@ -40,6 +40,14 @@
     "replayMode": "full-replay",
     "sidecarTlsOut": true,
     "logLevel": "info",
-    "logsCollected": true
+    "logsCollected": true,
+    "responderResources": {
+      "limits": {
+        "memory": "2684354560"
+      },
+      "requests": {
+        "memory": "268435456"
+      }
+    }
   }
 }
