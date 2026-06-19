@@ -8,9 +8,11 @@ cd "$ROOT"
 
 bash -n quality/scripts/run-replay.sh
 bash -n quality/scripts/run-proxymock-scenario.sh
+bash -n quality/scripts/apply-postman-auth-preflight.sh
 jq empty quality/dlp/banking-app-keys.json
 jq empty quality/test-configs/banking-daily-replay.json
 jq empty quality/transforms/banking-jwt-resign.json
+jq empty quality/postman/banking-auth.postman_collection.json
 
 if jq -e '.transforms[] | select((.filters.filters | length) == 0)' quality/dlp/banking-app-keys.json >/dev/null; then
   echo "FAIL: every DLP transform chain should have an explicit subset filter"
@@ -173,6 +175,36 @@ grep -q 'speedctl_cmd put test-config "$REPO_ROOT/quality/test-configs/banking-d
 
 grep -q 'proxymock cloud pull snapshot "$snapshot_id"' quality/scripts/run-proxymock-scenario.sh || {
   echo "FAIL: proxymock runner does not pull snapshots from Speedscale Cloud"
+  exit 1
+}
+
+grep -q 'apply-postman-auth-preflight.sh' quality/scripts/run-proxymock-scenario.sh || {
+  echo "FAIL: proxymock runner does not run the Postman auth preflight before replay"
+  exit 1
+}
+
+grep -q 'deployment/banking-gateway' quality/scripts/run-proxymock-scenario.sh || {
+  echo "FAIL: proxymock runner must run auth preflight through banking-gateway"
+  exit 1
+}
+
+grep -q 'PROXYMOCK_AUTH_PORT' quality/scripts/run-proxymock-scenario.sh || {
+  echo "FAIL: proxymock runner does not isolate the auth preflight port"
+  exit 1
+}
+
+grep -q 'Postman auth preflight did not update any banking Authorization headers' quality/scripts/apply-postman-auth-preflight.sh || {
+  echo "FAIL: Postman auth preflight should fail if no replay auth headers are updated"
+  exit 1
+}
+
+jq -e '
+  .info.name == "Banking Replay Auth"
+  and any(.item[]; .name == "Login" and .request.method == "POST" and (.request.url.path | join("/") == "api/users/login"))
+  and any(.variable[]; .key == "username" and .value == "harper.clark.001")
+  and any(.variable[]; .key == "password" and .value == "SimUser123!")
+' quality/postman/banking-auth.postman_collection.json >/dev/null || {
+  echo "FAIL: banking Postman auth collection must log in as the seeded demo user"
   exit 1
 }
 
@@ -348,4 +380,4 @@ for cluster in dev-decoy staging-decoy; do
   }
 done
 
-echo "PASS: demo replay config covers 7 workloads, proxymock CI, build tags, banking-replay, DLP session tagging, and JWT resigning"
+echo "PASS: demo replay config covers 7 workloads, proxymock CI, Postman auth preflight, build tags, banking-replay, DLP session tagging, and JWT resigning"

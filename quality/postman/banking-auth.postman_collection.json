@@ -1,0 +1,49 @@
+{
+  "info": {
+    "name": "Banking Replay Auth",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"usernameOrEmail\":\"{{username}}\",\"password\":\"{{password}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/users/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users",
+            "login"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:18081"
+    },
+    {
+      "key": "username",
+      "value": "harper.clark.001"
+    },
+    {
+      "key": "password",
+      "value": "SimUser123!"
+    }
+  ]
+}

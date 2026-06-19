@@ -57,3 +57,9 @@
 - **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS; `banking-jwt-resign` applies `jwt_resign` to inbound Authorization headers using `${{secret:banking-jwt-secret/secret}}`, and the replay runner syncs and attaches that transform to each selected snapshot before replay. DLP remains scoped to session tagging and sensitive outbound credentials.
 - **Status**: PROVEN
 - **Date**: 2026-06-19
+
+## Proxymock CI runs a Postman auth preflight before replay
+- **Level**: Integration
+- **Evidence**: `thoughts/scripts/verify-demo-replay-config.sh` PASS; `quality/postman/banking-auth.postman_collection.json` logs in as the seeded demo user, and `quality/scripts/run-proxymock-scenario.sh` runs that preflight through `banking-gateway` before replacing banking Authorization headers in the pulled snapshot.
+- **Status**: PROVEN
+- **Date**: 2026-06-19

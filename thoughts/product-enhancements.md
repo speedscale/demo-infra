@@ -2,6 +2,7 @@
 
 ## High Priority
 
+- Make the Postman/import auth flow usable from `speedctl infra replay` and proxymock CI: run the auth collection as call 0, extract `access_token` or `token`, and replace recorded bearer tokens before replay starts.
 - Add a first-class replay auth token provider for normal captured traffic with expired, malformed-signature, or otherwise replay-invalid tokens. It should bridge DLP and replay auth by extracting non-sensitive identity claims before redaction, then generating fresh per-session tokens during replay.
 - Replay should preserve auth intent instead of requiring teams to filter out, hand-edit, or de-redact captured Authorization traffic.
 - Replay setup should recommend `jwt_resign` when captured inbound Authorization JWTs are expired or likely to expire before replay. DLP redaction should not be presented as the auth repair path.

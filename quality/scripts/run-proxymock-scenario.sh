@@ -26,6 +26,37 @@ get_config_value() {
   awk -v k="$key" '$1==k":" {gsub(/["'"'"']/, "", $2); print $2; exit}' "$file"
 }
 
+declare -a port_forward_pids
+cleanup() {
+  for pid in "${port_forward_pids[@]:-}"; do
+    kill "$pid" 2>/dev/null || true
+  done
+}
+trap cleanup EXIT
+
+wait_for_local_port() {
+  local port=$1 log_file=$2
+  for attempt in {1..30}; do
+    if timeout 1 bash -c "</dev/tcp/127.0.0.1/$port" 2>/dev/null; then
+      return 0
+    fi
+    if [ "$attempt" -eq 30 ]; then
+      echo "Port-forward did not become ready on localhost:$port"
+      cat "$log_file" || true
+      return 1
+    fi
+    sleep 1
+  done
+}
+
+start_service_port_forward() {
+  local ns=$1 svc=$2 local=$3 remote=$4 log_file=$5
+
+  kubectl -n "$ns" port-forward "service/$svc" "$local:$remote" >"$log_file" 2>&1 &
+  port_forward_pids+=("$!")
+  wait_for_local_port "$local" "$log_file"
+}
+
 name=$(get_config_value "$CONFIG_FILE" "name")
 namespace=$(get_config_value "$CONFIG_FILE" "namespace")
 snapshot_id=$(get_config_value "$CONFIG_FILE" "snapshotID")
@@ -117,6 +148,17 @@ if [ -f "$prune_file" ]; then
   info "Pruned $prune_count request(s)"
 fi
 
+auth_port="${PROXYMOCK_AUTH_PORT:-18081}"
+auth_pf_log="$runner_temp/${name}-auth-port-forward.log"
+info "Running Postman auth preflight through $namespace/banking-gateway"
+if ! kubectl -n "$namespace" wait --for=condition=available "deployment/banking-gateway" --timeout=5m; then
+  warn "Deployment $namespace/banking-gateway is not available"
+  kubectl -n "$namespace" get deployment banking-gateway || true
+  exit 1
+fi
+start_service_port_forward "$namespace" banking-gateway "$auth_port" 80 "$auth_pf_log"
+"$SCRIPT_DIR/apply-postman-auth-preflight.sh" "$snapshot_dir" "http://localhost:$auth_port"
+
 info "Forwarding $namespace/$service:$service_port to localhost:$local_port"
 if ! kubectl -n "$namespace" wait --for=condition=available "deployment/$service" --timeout=5m; then
   warn "Deployment $namespace/$service is not available"
@@ -124,21 +166,7 @@ if ! kubectl -n "$namespace" wait --for=condition=available "deployment/$service
   exit 1
 fi
 port_forward_log="$runner_temp/${name}-port-forward.log"
-kubectl -n "$namespace" port-forward "service/$service" "$local_port:$service_port" >"$port_forward_log" 2>&1 &
-pf_pid=$!
-trap 'kill "$pf_pid" 2>/dev/null || true' EXIT
-
-for attempt in {1..30}; do
-  if timeout 1 bash -c "</dev/tcp/127.0.0.1/$local_port" 2>/dev/null; then
-    break
-  fi
-  if [ "$attempt" -eq 30 ]; then
-    echo "Port-forward did not become ready"
-    cat "$port_forward_log" || true
-    exit 1
-  fi
-  sleep 1
-done
+start_service_port_forward "$namespace" "$service" "$local_port" "$service_port" "$port_forward_log"
 
 info "Replaying proxymock scenario: $name"
 replay_status=0
