@@ -13,6 +13,7 @@ jobs:
   ci-replay:
     name: CI replay (proxymock)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
