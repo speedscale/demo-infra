@@ -105,3 +105,9 @@
 - **Evidence**: thoughts/scripts/verify-byoc-s3-layout.sh
 - **Status**: PROVEN
 - **Date**: 2026-06-19
+
+## Daily workflow artifact upload uses a Node 24 action
+- **Level**: Integration
+- **Evidence**: thoughts/scripts/verify-github-actions-node24.sh PASS; repository workflow files contain no actions/upload-artifact@v0-v5 references.
+- **Status**: PROVEN
+- **Date**: 2026-06-22
