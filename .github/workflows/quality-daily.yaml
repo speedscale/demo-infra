@@ -9,10 +9,49 @@ on:
         description: 'Cluster to replay (or "all")'
         default: 'all'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
 jobs:
+  validate-scheduled-run:
+    name: Validate scheduled run
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      should-run: ${{ steps.guard.outputs.should-run }}
+    steps:
+    - name: Check scheduled SHA
+      id: guard
+      env:
+        GH_TOKEN: ${{ github.token }}
+        EVENT_NAME: ${{ github.event_name }}
+        REPOSITORY: ${{ github.repository }}
+        RUN_SHA: ${{ github.sha }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      run: |
+        if [ "$EVENT_NAME" != "schedule" ]; then
+          echo "should-run=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        latest_sha="$(gh api "repos/$REPOSITORY/commits/$DEFAULT_BRANCH" --jq .sha)"
+        if [ "$RUN_SHA" != "$latest_sha" ]; then
+          echo "Scheduled run is stale: $RUN_SHA != $latest_sha"
+          echo "should-run=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        echo "should-run=true" >> "$GITHUB_OUTPUT"
+
   ci-replay:
     name: CI replay (proxymock)
     runs-on: ubuntu-latest
+    needs: validate-scheduled-run
+    if: needs.validate-scheduled-run.outputs.should-run == 'true'
     timeout-minutes: 20
     strategy:
       fail-fast: false
