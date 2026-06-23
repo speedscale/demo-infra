@@ -28,6 +28,22 @@ jobs:
     - name: Apply ArgoCD Applications
       run: kubectl apply -f clusters/${{ matrix.cluster }}/argocd/
 
+    - name: Patch Replay Lab forwarder export
+      run: |
+        if kubectl -n speedscale get configmap speedscale-forwarder >/dev/null 2>&1; then
+          current="$(kubectl -n speedscale get configmap speedscale-forwarder -o jsonpath='{.data.EXPORTERS}')"
+          merged="$(
+            printf '%s' "$current" | jq -c \
+              '. + {replay_lab: {dlp_config_id: "banking-app-keys", filter_rule: "standard", otel_endpoint: "http://replay-lab-control.replay-lab.svc.cluster.local:4317"}}'
+          )"
+          patch="$(jq -cn --arg exporters "$merged" '{data: {EXPORTERS: $exporters}}')"
+          kubectl -n speedscale patch configmap speedscale-forwarder --type merge -p "$patch"
+          kubectl -n speedscale rollout restart deployment/speedscale-forwarder
+          kubectl -n speedscale rollout status deployment/speedscale-forwarder --timeout=180s
+        else
+          echo "Skipping Replay Lab forwarder export patch: speedscale-forwarder ConfigMap is not present yet"
+        fi
+
     - name: Apply SealedSecrets
       run: |
         if [ -d "clusters/${{ matrix.cluster }}/sealed-secrets" ]; then
