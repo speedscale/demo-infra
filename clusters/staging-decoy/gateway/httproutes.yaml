@@ -86,7 +86,7 @@ spec:
     - name: agent-factory-staging-decoy-intake-api
       port: 8080
 ---
-# Replay Lab public console + read-only control status endpoints.
+# Replay Lab public console, status, API, and snapshot webhook endpoints.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -109,6 +109,9 @@ spec:
     - path:
         type: PathPrefix
         value: /api
+    - path:
+        type: PathPrefix
+        value: /webhooks
     backendRefs:
     - name: replay-lab-control
       port: 80
