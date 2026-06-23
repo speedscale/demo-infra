@@ -24,10 +24,6 @@ spec:
               enabled: true
         forwarder:
           exporters:
-            agent_factory:
-              dlp_config_id: banking-app-keys
-              filter_rule: standard
-              otel_endpoint: http://agent-factory-dev-decoy-intake-api.agent-factory.svc.cluster.local:4317
             byoc_grafana:
               dlp_config_id: banking-app-keys
               filter_rule: standard
