@@ -26,5 +26,10 @@
         }
       ]
     }
-  ]
+  ],
+  "generatorExpectedEnvironment": {
+    "secrets": [
+      "${{secret:banking-jwt-secret/secret}}"
+    ]
+  }
 }
