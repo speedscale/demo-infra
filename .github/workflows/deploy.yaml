@@ -33,12 +33,11 @@ jobs:
         if [ -d "clusters/${{ matrix.cluster }}/sealed-secrets" ]; then
           for f in clusters/${{ matrix.cluster }}/sealed-secrets/*.yaml; do
             ns=$(grep 'namespace:' "$f" | head -1 | awk '{print $2}')
-            if kubectl get namespace "$ns" &>/dev/null; then
-              echo "Applying $f"
-              kubectl apply -f "$f"
-            else
-              echo "Skipping $f: namespace $ns does not exist"
+            if [ -n "$ns" ]; then
+              kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f -
             fi
+            echo "Applying $f"
+            kubectl apply -f "$f"
           done
         fi
 

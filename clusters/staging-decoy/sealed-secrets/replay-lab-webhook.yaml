@@ -1,0 +1,13 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: replay-lab-webhook
+  namespace: replay-lab
+spec:
+  encryptedData:
+    token: AgCC2YqRvyT5fcAtKK4PCgCE6zzsvyotY8eWpikSR611Z10FVv9Nwha1noVH/9g0/VptsvnfCUpUd04XoW6lwmSsESAJ7H0QuVy9l6jX+z87Gv+cXmD5lPuRGVuhQKJWQRGBhDDzKqRDAH/bCBE7oey4k+7ZMWvRo5MQ6wLjdPfLIFFvl3bRw3slbFHuMcl1SlmVH/g8YdHJYJeO4pRv+HQu4cHnbztu6NU+g6ZwWUozL4btnTjsNAoKeDsg5fXXwPechJ8kHLCdetrXGX6e/PZ231uemosjOdRZyGjnW2zGMX87gmgcpTT2e5uJ5genCXrHRglfHgk2hBhQ6++SEFOcfAAebXLxnrauPSrKI8d3pOHPqqaZFTYh1Auwn0WzIPVFtIbniG65VCnSRHLafp/cZCU5qB82UQI/++FLVAx040B+9kVUBpP3G+1a9hAJ9dZvj4wtSNb4JILKjEQJ1zYfXKMNnRxeYJdXXuYFIrxKBDqcNW7FadUD5mTGwXoAZnL+4sYXRLLNrDOZmDFS53vQhIQrhHCeBM/T6Gk6BYllqUmec/LtuEV5okFI6YhVNnZUzQ7CwKyXR0SDhsSgl+AYlwhDeEQjcbgtaBCDbbJtyRXVVRbegdwamNPnB2dy1UTqXvxFPB2UE0YOiyk0RE8CyTqjiOHVTHGzeaUZo0SxMuLCFE6heKfqz8oJD/K5d5R3wYsI/UNVj7f/EFPNABKLG6KjRBX7vZ7ZzK8KBsCUEdEz9ldan/JufEt87bmCqPyGnv0EylUyXIff7jQrgN3E
+  template:
+    metadata:
+      name: replay-lab-webhook
+      namespace: replay-lab
