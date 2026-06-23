@@ -85,3 +85,34 @@ spec:
     backendRefs:
     - name: agent-factory-staging-decoy-intake-api
       port: 8080
+---
+# Replay Lab public console + read-only control status endpoints.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: replay-lab
+  namespace: replay-lab
+spec:
+  parentRefs:
+  - name: apex-gateway
+    namespace: istio-system
+  hostnames:
+  - replay-lab-staging.trafficreplay.com
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /status
+    - path:
+        type: Exact
+        value: /readyz
+    backendRefs:
+    - name: replay-lab-control
+      port: 80
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: replay-lab-console
+      port: 80

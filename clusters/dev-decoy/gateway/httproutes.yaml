@@ -97,7 +97,7 @@ spec:
   - name: apex-gateway
     namespace: istio-system
   hostnames:
-  - apex-replay-lab-dev.trafficreplay.com
+  - replay-lab-dev.trafficreplay.com
   rules:
   - matches:
     - path:
