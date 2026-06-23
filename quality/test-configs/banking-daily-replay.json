@@ -33,7 +33,7 @@
   "responder": {
     "numReplicas": 1,
     "responseDelay": {
-      "mode": "RECORDED"
+      "mode": "NONE"
     },
     "dlpConfigId": "banking-app-keys"
   },
