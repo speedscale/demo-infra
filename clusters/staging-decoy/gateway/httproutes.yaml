@@ -106,6 +106,9 @@ spec:
     - path:
         type: Exact
         value: /readyz
+    - path:
+        type: PathPrefix
+        value: /api
     backendRefs:
     - name: replay-lab-control
       port: 80
