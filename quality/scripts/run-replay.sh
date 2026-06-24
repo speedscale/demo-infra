@@ -149,6 +149,7 @@ ensure_snapshot_jwt_resign() {
     .tokenConfigId == $id
     and .tokenizerConfig.id == $id
     and any((.tokenizerConfig.generator // [])[]; any(.transforms[]?; .type == "jwt_resign"))
+    and ((.tokenizerConfig.generatorExpectedEnvironment.secrets // []) | length > 0)
   ' "$current" >/dev/null; then
     rm -f "$current" "$updated"
     return 0

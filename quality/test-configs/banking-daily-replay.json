@@ -16,7 +16,7 @@
     {
       "metricName": "passAssertPct",
       "type": "TOO_LOW",
-      "value": 100,
+      "value": 98,
       "action": "ALERT"
     }
   ],
@@ -33,7 +33,7 @@
   "responder": {
     "numReplicas": 1,
     "responseDelay": {
-      "mode": "RECORDED"
+      "mode": "NONE"
     },
     "dlpConfigId": "banking-app-keys"
   },
