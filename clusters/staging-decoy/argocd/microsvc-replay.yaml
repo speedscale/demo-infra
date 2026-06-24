@@ -14,19 +14,15 @@ spec:
     # default OFF). Remove to disarm.
     kustomize:
       patches:
-        - patch: |-
-            apiVersion: apps/v1
+        - target:
             kind: Deployment
-            metadata:
-              name: banking-transactions
-            spec:
-              template:
-                spec:
-                  containers:
-                    - name: transactions-service
-                      env:
-                        - name: DEMO_MEMO_BUG_ENABLED
-                          value: "true"
+            name: banking-transactions
+          patch: |-
+            - op: add
+              path: /spec/template/spec/containers/0/env/-
+              value:
+                name: DEMO_MEMO_BUG_ENABLED
+                value: "true"
   destination:
     server: https://kubernetes.default.svc
     namespace: banking-replay
