@@ -1,5 +1,39 @@
 # Capturing fresh banking snapshots (the seed)
 
+## The mix: three dependency-handling patterns in one gate
+
+The banking gate deliberately demonstrates **all three** Speedscale replay modes,
+each on the services it fits best. `quality/scripts/run-quality-mix.sh` runs it.
+
+| services | pattern | dependency handling | why this pattern |
+|---|---|---|---|
+| gateway, ai, fraud, notification | **mock-all** (proxymock) | every recorded dep mocked; **no DB at all** | these are stateless / proxy / gRPC / Kafka — `DB:none` on capture, so mocking is trivial + self-contained |
+| **accounts** | **mock-the-DB** (proxymock) | Postgres + HTTP deps served **from the recording** | read-heavy; proxymock serves the recorded reads — **proven: GET reads 100%, zero real DB touched** |
+| **user, transactions** | **restore-fixture** (db-fixture + speedctl) | **real** Postgres reset to the recording's start-state; HTTP deps mocked | write / server-assigned-ID heavy; restoring the fixture **resets the sequences** so the SUT re-assigns the *same* IDs — the one thing mocking can't reproduce |
+
+**Evidence behind the split (measured here):**
+- *Mock-the-DB works via proxymock* — accounts reads came back 100% with the
+  account IDs served from the recording (they don't exist in the live DB).
+- *Mock-the-DB via the in-cluster speedctl responder does NOT* — it intercepts
+  Postgres (no real writes) but its query **matching is incomplete**: Java/JDBC
+  gets empty results → `404`, .NET/Npgsql gets malformed frames → `500`
+  ("Severity not received"). So PG mocking here = **proxymock**, not the responder.
+- *Restore-fixture is the only thing that reproduces server-assigned IDs* —
+  validated: banking-app `user_service` (~71k rows) restored into banking-replay
+  with `users_id_seq` aligned, so register/login/create regenerate identical IDs.
+
+**Run it:**
+```bash
+# Path B services need a fixture captured paired with their snapshots:
+quality/scripts/db-fixture.sh capture /tmp/fix          # T0 start-state
+quality/scripts/capture-snapshots.sh 15m                # [T0, T0+15m] snapshots
+quality/scripts/run-quality-mix.sh staging-decoy /tmp/fix
+```
+
+**Status:** mock-all + mock-the-DB(reads) are proven; the restore-fixture
+end-to-end (paired capture + `--mock-except` replay, now supported via
+`MOCK_EXCEPT=host:banking-postgres`) is wired and pending a full validation run.
+
 ## Why this exists
 
 The daily quality replays compare each banking service's responses against a
