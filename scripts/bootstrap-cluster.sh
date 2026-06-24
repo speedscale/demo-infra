@@ -34,10 +34,11 @@ echo "Bootstrapping cluster: $CLUSTER_NAME"
 # Install ArgoCD
 "$SCRIPT_DIR/install-argocd.sh" "$CLUSTER_NAME"
 
-# Apply all ArgoCD Application manifests
+# Apply the root ArgoCD Application. It owns and self-heals the child
+# Application manifests in the same directory.
 echo ""
-echo "Applying ArgoCD Application manifests..."
-kubectl apply -f "$ARGOCD_DIR/"
+echo "Applying root ArgoCD Application manifest..."
+kubectl apply -f "$ARGOCD_DIR/demo-infra-apps.yaml"
 
 # Apply SealedSecrets (must come after sealed-secrets controller is synced)
 SEALED_DIR="$CLUSTER_DIR/sealed-secrets"
