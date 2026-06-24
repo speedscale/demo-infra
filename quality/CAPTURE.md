@@ -112,3 +112,43 @@ reseed required.
 JWT is handled on both paths (mount fix on the speedctl path; Postman preflight on
 the proxymock path), so auth is not the blocker — the data layer is, and mocking
 it removes the problem class entirely.
+
+## Making the gate deterministic — two paths
+
+The remaining work to turn the gate green is removing the replay's dependence on
+live DB state. Two approaches (both validated to the point noted):
+
+### Path A — mock the DB
+Use a fresh full-dependency snapshot; the responder intercepts the SUT's `:5432`
+calls. **Validated:** the interception engages (replay leaves the real DB
+untouched). **Blocker:** for any query *not* in the captured window (notably the
+SUT's startup/seed queries), the responder returns a malformed Postgres frame
+(".NET: Severity not received") → the SUT errors. Finish options:
+- Capture a window that **includes a SUT restart** so startup/seed queries are
+  recorded; and/or widen matching via `proxymock-prune/<svc>.patterns`.
+- Or use the **proxymock mock-all** path (passthrough off) and confirm its
+  Postgres matching is more tolerant.
+This path is cleanest *if* Postgres no-match is handled gracefully
+(Speedscale-side) — otherwise it stays fragile.
+
+### Path B — restore a DB fixture (recommended; `db-fixture.sh`)
+Replay against the **real** DB, but reset it to the recording's start-state first.
+Because the fixture restores the identity **sequences**, the SUT re-assigns the
+**same** server-generated IDs — reproducing the one thing mocking/seeding can't.
+
+1. **Capture (paired):**
+   ```bash
+   quality/scripts/db-fixture.sh capture /tmp/fix-$(date +%s)   # T0: dump start-state
+   quality/scripts/capture-snapshots.sh 15m                     # capture [T0, T0+15m]
+   ```
+2. **Before each replay:** `quality/scripts/db-fixture.sh restore <dir>` — truncates
+   + reloads banking-replay's `*_service` schemas and resets sequences. (This also
+   cleans up any ad-hoc DB drift.)
+3. **Replay with Postgres real, externals mocked:** keep `:5432` out of the mock
+   set — `speedctl infra replay --mock-except 'host:banking-postgres'` (or capture
+   the snapshot with Postgres filtered). The HTTP deps (socure/netverify/stripe/…)
+   stay mocked from the snapshot.
+
+**Validated:** dump→restore→sequence-reset works (banking-app `user_service`
+~71k rows restored into banking-replay, `users_id_seq` aligned). **Remaining:** the
+paired capture + the `--mock-except` replay wiring into the gate.
