@@ -57,35 +57,6 @@ spec:
     backendRefs:
     - name: jaeger
       port: 16686
----
-# agent-factory intake-api alert webhooks. Scoped to /webhooks (the three
-# alert endpoints) + /healthz only — /qa/runs and /runs are intentionally NOT
-# exposed (they queue/inspect runs and are unauthenticated when
-# INTAKE_API_TOKEN is unset). Datadog/Grafana/PagerDuty POST here; the listener
-# snapshots the impacted service's traffic from the 10 min before the alert.
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: agent-factory-webhooks
-  namespace: agent-factory
-spec:
-  parentRefs:
-  - name: apex-gateway
-    namespace: istio-system
-  hostnames:
-  - apex-agent-factory-dev.trafficreplay.com
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /webhooks
-    - path:
-        type: PathPrefix
-        value: /healthz
-    backendRefs:
-    - name: agent-factory-dev-decoy-intake-api
-      port: 8080
----
 # Replay Lab public snapshot webhook endpoints. Keep the dashboard and API private.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
