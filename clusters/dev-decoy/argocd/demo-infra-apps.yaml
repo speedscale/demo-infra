@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo-infra-apps
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/speedscale/demo-infra
+    targetRevision: main
+    path: clusters/dev-decoy/argocd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
