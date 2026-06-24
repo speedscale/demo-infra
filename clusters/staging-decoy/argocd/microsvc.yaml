@@ -9,6 +9,24 @@ spec:
     repoURL: https://github.com/speedscale/microsvc
     targetRevision: HEAD
     path: kubernetes/overlays/speedscale-sidecar
+    # Demo fixture: arm the Replay Lab null-memo bug on banking-transactions
+    # (microsvc TransactionService, flag demo.memo-bug.enabled, default OFF in the
+    # app). This IaC patch flips it ON for the Replay Lab recording. Remove to disarm.
+    kustomize:
+      patches:
+        - patch: |-
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: banking-transactions
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: transactions-service
+                      env:
+                        - name: DEMO_MEMO_BUG_ENABLED
+                          value: "true"
   destination:
     server: https://kubernetes.default.svc
     namespace: banking-app
