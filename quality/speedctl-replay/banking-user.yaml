@@ -3,7 +3,7 @@ workload: banking-user
 namespace: banking-replay
 snapshotID: effa29f8-4a0d-4b20-a142-664de00ab4e6
 devSnapshotID: fb2382d4-40f4-48a1-a146-172830ede77d
-stagingSnapshotID: fb2382d4-40f4-48a1-a146-172830ede77d
+stagingSnapshotID: 358c8996-23ea-4829-b953-ad3450d414ee
 proxymockSnapshotID: 19243e85-dc9d-400c-ba13-fe482bcf835f
 testConfigID: banking-daily-replay
 service: banking-user

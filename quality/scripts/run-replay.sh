@@ -266,7 +266,7 @@ for f in "${replay_files[@]}"; do
   report_id=""
   for attempt in 1 2 3; do
     # MOCK_EXCEPT (optional): keep selected out-services OUT of the mock set so
-    # they hit the real (restored) dependency -- Path B uses 'host:banking-postgres'
+    # they hit the real (restored) dependency -- Path B uses 'glob:*postgres*'
     # so the SUT reads the fixture DB while HTTP deps stay mocked.
     output=$(speedctl_cmd infra replay \
       --cluster "$CLUSTER_NAME" \

@@ -47,6 +47,6 @@ info "Restoring DB fixture from $FIXTURE_DIR"
 "$SCRIPT_DIR/db-fixture.sh" restore "$FIXTURE_DIR"
 for s in "${FIXTURE_SVCS[@]}"; do
   info "--- banking-$s (fixture + --mock-except postgres) ---"
-  MOCK_EXCEPT='host:banking-postgres' "$SCRIPT_DIR/run-replay.sh" "$CLUSTER" "banking-$s" || warn "  banking-$s replay failed"
+  MOCK_EXCEPT='glob:*postgres*' "$SCRIPT_DIR/run-replay.sh" "$CLUSTER" "banking-$s" || warn "  banking-$s replay failed"
 done
 info "===== mix complete ====="

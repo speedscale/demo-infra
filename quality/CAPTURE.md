@@ -30,9 +30,26 @@ quality/scripts/capture-snapshots.sh 15m                # [T0, T0+15m] snapshots
 quality/scripts/run-quality-mix.sh staging-decoy /tmp/fix
 ```
 
-**Status:** mock-all + mock-the-DB(reads) are proven; the restore-fixture
-end-to-end (paired capture + `--mock-except` replay, now supported via
-`MOCK_EXCEPT=host:banking-postgres`) is wired and pending a full validation run.
+**Validated (measured):**
+- **restore-fixture / user → 96.3%** — paired fixture + `MOCK_EXCEPT=glob:*postgres*`
+  (real DB, externals mocked). register/login/profile all deterministic; the few
+  fails are a small capture-gap (tighten T0↔window alignment). This is the proof
+  that the sequence-reset reproduces server-assigned IDs.
+- **restore-fixture / transactions → 60.8%** — reads (`GET`) fully deterministic
+  at 200; `POST` creates still `400` because they fan out to **fraud (gRPC) +
+  banking-accounts (HTTP)** mocks and carry non-deterministic fields (generated
+  txn id/timestamp) that don't match. Fix = ignore-transforms on those request
+  matchers (cross-service, *not* a DB issue).
+- **mock-the-DB / accounts (proxymock) → reads 100%**, zero real DB.
+- **mock-all / ai+fraud+notification → 100%** on the daily gate.
+
+> The correct `--mock-except` selector is **`glob:*postgres*`** (matches the
+> out-service key `banking-user:banking-postgres.banking-app.svc.cluster.local:5432`).
+> `host:banking-postgres` does **not** match.
+
+> Path B requires a **paired** (fixture, snapshot): `db-fixture.sh capture` at T0,
+> then `capture-snapshots.sh` over `[T0, T0+window]`, then wire those snapshot IDs
+> and `db-fixture.sh restore` before replay.
 
 ## Why this exists
 
@@ -179,7 +196,7 @@ Because the fixture restores the identity **sequences**, the SUT re-assigns the
    + reloads banking-replay's `*_service` schemas and resets sequences. (This also
    cleans up any ad-hoc DB drift.)
 3. **Replay with Postgres real, externals mocked:** keep `:5432` out of the mock
-   set — `speedctl infra replay --mock-except 'host:banking-postgres'` (or capture
+   set — `speedctl infra replay --mock-except 'glob:*postgres*'` (or capture
    the snapshot with Postgres filtered). The HTTP deps (socure/netverify/stripe/…)
    stay mocked from the snapshot.
 
