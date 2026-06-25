@@ -4,7 +4,6 @@ namespace: banking-replay
 snapshotID: 7b3d0b6e-f0df-489d-8254-d23f56cce131
 devSnapshotID: 75ef5e98-2755-45c4-ba4a-8747c5fbb13d
 stagingSnapshotID: 7b3d0b6e-f0df-489d-8254-d23f56cce131
-proxymockSnapshotID: efef8d56-d837-4a0e-963e-028bb8dd73e6
 testConfigID: banking-daily-replay
 service: banking-fraud
 servicePort: 8080
