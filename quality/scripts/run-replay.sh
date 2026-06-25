@@ -156,6 +156,20 @@ ensure_snapshot_jwt_resign() {
   fi
 
   if ! sync_enabled; then
+    # Read-only gate runs can't attach transforms. Tolerate an env-only gap: if the
+    # jwt_resign transform itself is present, proceed even when the expected-secret
+    # env is absent. A missing env just means the JWT secret mount may be skipped
+    # (auth can miss -> goal miss), which the gate already tolerates -- it should not
+    # hard-fail the whole run. Only hard-fail when the resign transform is truly absent
+    # (e.g. dev snapshots that were synced before the env was added).
+    if jq -e --arg id "$JWT_TRANSFORM_ID" '
+      .tokenConfigId == $id
+      and any((.tokenizerConfig.generator // [])[]; any(.transforms[]?; .type == "jwt_resign"))
+    ' "$current" >/dev/null; then
+      warn "Snapshot $snapshot_id has $JWT_TRANSFORM_ID but no expected-secret env; proceeding (JWT secret mount may be skipped)."
+      rm -f "$current" "$updated"
+      return 0
+    fi
     rm -f "$current" "$updated"
     error "Snapshot $snapshot_id is missing the $JWT_TRANSFORM_ID JWT resign transform."
     error "Run with SYNC_SPEEDSCALE_ARTIFACTS=true using a user/admin key to attach replay transforms."
