@@ -4,6 +4,10 @@ metadata:
   name: mesh-default
   namespace: istio-system
 spec:
+  tracing:
+  - providers:
+    - name: otel
+    randomSamplingPercentage: 100
   accessLogging:
   - providers:
     - name: envoy
