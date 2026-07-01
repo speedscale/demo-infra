@@ -1,0 +1,14 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: replay-lab-speedscale-apikey
+  namespace: replay-lab
+spec:
+  encryptedData:
+    SPEEDSCALE_API_KEY: AgBhutWCRggKBML3bz+KSIPrxEtJtJ1sjmKXObykn3klSlw5jop06IK51YzSKy07UIujr0mmHQEGxuKEx0L++Ws+EcBQ9gVWG3xUOm9X0rSBG7kEI2pHWgSMxr9NoozhE0kkuMlACE9hgNWvUJ0UXq0FFvVjw5a/Qss9Xzlrme6BwfgS6QhC9WJZIEnX+QlrEhuYN2+1Pu/lV7lTQt9gZ3s/FxU58MMSJBDF85vN23Q5V1HHyeOtPCsOjv5ZCoTe/+MIqqkv7D+I08lPu7Lm/dOrKMe/K0RxzjJtc+cn0Ns3iD2F1soWJO9cLEottRxF+ytBZ0YpHdbeLe2B7TXDIyf81vTNqnqmhrgHQ8bmkQLhO+Osgw6d+v15PjHvqmI17zw8mEOohPghxgIkQ56/qu4qyFpe2/OL9n5S+w/HWfP2D9l8JnRUo/yL9Fn+dR0as5bHGT9pt9gYyTM+oa4Lb0r2xxtwo+hECiIiACgrwTJ0adna08dj7dZhtriohkms4XesZRLAW2A5lYfnuiU5K3vkZ4Xv8qcqWk/cZ1IM8EDZVAspltrOgZ0ZQG9fvAE2Kmkv4tMF6uIf1S3hy9yTGPPQXV63rt/JLU0q/Km/aTWntHZpK6/b9aA1+izRy3tSp32PW+YzxO3s30hyPLwMthu7h08dvzboIbDkF7I7KhPXELqCLVj06ulleYeo6YsrG4SNZT3NHvFkWlf4lPJicm9D46jNt1jYWKnMPApD4hR3dZ/N43oEmf2DAdhjHtk=
+  template:
+    metadata:
+      name: replay-lab-speedscale-apikey
+      namespace: replay-lab
+    type: Opaque
