@@ -32,10 +32,6 @@ spec:
               dlp_config_id: banking-app-keys
               filter_rule: standard
               otel_endpoint: http://otel-collector.byoc-s3.svc.cluster.local:4317
-            replay_lab:
-              dlp_config_id: banking-app-keys
-              filter_rule: standard
-              otel_endpoint: http://replay-lab-control.replay-lab.svc.cluster.local:4317
           resources:
             limits:
               cpu: "2"
