@@ -75,7 +75,10 @@ spec:
     namespace: speedscale
   syncPolicy:
     automated:
-      prune: true
+      # The operator chart ships its ConfigMap and cert Secrets as pre-install
+      # hooks (PreSync under Argo). Automated prune deletes them after every
+      # sync, and the next operator pod restart then fails to mount its certs.
+      prune: false
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
