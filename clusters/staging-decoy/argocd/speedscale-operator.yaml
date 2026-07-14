@@ -12,7 +12,7 @@ spec:
     helm:
       values: |
         apiKeySecret: speedscale-apikey
-        appUrl: staging.speedscale.com
+        appUrl: staging2.speedscale.com
         clusterName: staging-decoy
         dlp:
           config: banking-app-keys
