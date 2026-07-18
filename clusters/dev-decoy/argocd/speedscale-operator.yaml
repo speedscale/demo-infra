@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://speedscale.github.io/operator-helm/
     chart: speedscale-operator
-    targetRevision: 2.5.744
+    targetRevision: 2.5.788
     helm:
       values: |
         apiKeySecret: speedscale-apikey
@@ -22,6 +22,9 @@ spec:
           configuration:
             telemetry:
               enabled: true
+            diagnostics:
+              bpfStats:
+                enabled: true
         forwarder:
           exporters:
             byoc_grafana:
