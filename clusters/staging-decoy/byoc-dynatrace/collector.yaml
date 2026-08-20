@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: byoc-dynatrace
+data:
+  otel.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      # RRPair log records carry full request/response bodies, so batches must
+      # stay far below Dynatrace's 10MiB OTLP payload cap (the operator-managed
+      # telemetry-ingest collector batches ~1800 records and gets HTTP 413).
+      batch:
+        send_batch_size: 100
+        send_batch_max_size: 200
+        timeout: 5s
+
+    exporters:
+      # Straight to the tenant OTLP API over public TLS; skips the in-cluster
+      # ActiveGate and its payload limit. Token comes from the byoc-dynatrace
+      # secret (created out-of-band, not in git).
+      otlphttp:
+        endpoint: https://uim8926h.sprint.dynatracelabs.com/api/v2/otlp
+        headers:
+          Authorization: Api-Token ${env:DT_INGEST_TOKEN}
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+
+    service:
+      extensions: [health_check]
+      pipelines:
+        logs:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlphttp]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: byoc-dynatrace
+  labels:
+    app: otel-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.108.0
+          args: ["--config=/etc/otel/otel.yaml"]
+          env:
+            - name: DT_INGEST_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: byoc-dynatrace
+                  key: dataIngestToken
+          ports:
+            - containerPort: 4317
+            - containerPort: 4318
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otel
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 13133
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 13133
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: byoc-dynatrace
+spec:
+  selector:
+    app: otel-collector
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
