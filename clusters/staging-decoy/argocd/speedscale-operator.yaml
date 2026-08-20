@@ -32,12 +32,12 @@ spec:
               dlp_config_id: banking-app-keys
               filter_rule: standard
               otel_endpoint: http://otel-collector.byoc-s3.svc.cluster.local:4317
-            # Dynatrace OTLP ingest via the operator-managed telemetry-ingest
-            # collector (DynaKube decoy-agents); it holds the tenant token.
+            # Dynatrace OTLP ingest via the byoc-dynatrace collector (small batches
+            # to stay under the tenant 10MiB OTLP cap); it holds the ingest token.
             byoc_dynatrace:
               dlp_config_id: banking-app-keys
               filter_rule: standard
-              otel_endpoint: http://telemetry-ingest.dynatrace.svc.cluster.local:4317
+              otel_endpoint: http://otel-collector.byoc-dynatrace.svc.cluster.local:4317
             replay_lab:
               dlp_config_id: banking-app-keys
               filter_rule: standard
