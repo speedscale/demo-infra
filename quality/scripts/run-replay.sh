@@ -126,6 +126,21 @@ fi
 
 info "Found ${#replay_files[@]} replay config(s)"
 
+# --- cert trust preflight ---
+# A stale or self-inconsistent speedscale-certs copy makes every mock TLS
+# handshake fail while status-code assertions stay green. Fail fast instead.
+declare -A seen_namespaces
+declare -a canary_namespaces
+for f in "${replay_files[@]}"; do
+  ns=$(awk '$1=="namespace:" {gsub(/["'"'"']/, "", $2); print $2; exit}' "$f")
+  if [ -n "$ns" ] && [ -z "${seen_namespaces[$ns]:-}" ]; then
+    seen_namespaces[$ns]=1
+    canary_namespaces+=("$ns")
+  fi
+done
+info "Checking Speedscale cert trust in: ${canary_namespaces[*]}"
+"$SCRIPT_DIR/check-speedscale-certs.sh" "${canary_namespaces[@]}"
+
 # --- launch and monitor replays ---
 declare -A report_ids
 declare -A replay_statuses
@@ -244,6 +259,40 @@ wait_for_replay() {
   done
 }
 
+check_mock_utilization() {
+  local name=$1 rid=$2 snapshot_id=$3
+  local out_count entries total elapsed=0
+  local poll_interval=20 poll_timeout=300
+
+  out_count=$(speedctl_cmd get snapshot "$snapshot_id" 2>/dev/null | jq '.outTraffic | length' 2>/dev/null || echo 0)
+  if [ "${out_count:-0}" -eq 0 ]; then
+    info "  $name: snapshot has no outbound traffic; skipping mock utilization check"
+    return 0
+  fi
+
+  # matchCount/noMatchCount/passthroughCount are added by the analyzer shortly
+  # after the report completes; poll until they appear.
+  while [ $elapsed -lt $poll_timeout ]; do
+    entries=$(speedctl_cmd get report "$rid" 2>/dev/null | jq '[.report.aggregates[]? | select(.name=="matchCount" or .name=="noMatchCount" or .name=="passthroughCount")]' 2>/dev/null || echo "[]")
+    if [ "$(echo "$entries" | jq 'length')" -gt 0 ]; then
+      total=$(echo "$entries" | jq '[.[].gaugeVal.val // 0] | add')
+      if [ "${total:-0}" -eq 0 ]; then
+        error "  $name: responder received ZERO requests (match+noMatch+passthrough = 0)."
+        error "  The snapshot has $out_count mocked outbound service(s), so the SUT never reached the responder."
+        error "  Likely causes: TLS trust mismatch in the app namespace speedscale-certs copy, or the operator failed to patch the SUT (missing control-plane certs)."
+        return 1
+      fi
+      info "  $name: responder handled $total request(s)"
+      return 0
+    fi
+    sleep "$poll_interval"
+    elapsed=$((elapsed + poll_interval))
+  done
+
+  error "  $name: mock utilization aggregates never appeared on report $rid after ${poll_timeout}s"
+  return 1
+}
+
 for f in "${replay_files[@]}"; do
   name=$(get_config_value "$f" "name")
   workload=$(get_config_value "$f" "workload")
@@ -311,7 +360,11 @@ for f in "${replay_files[@]}"; do
   replay_statuses["$name"]="running"
 
   if wait_for_replay "$name" "$report_id"; then
-    replay_statuses["$name"]="completed"
+    if check_mock_utilization "$name" "$report_id" "$snapshot_id"; then
+      replay_statuses["$name"]="completed"
+    else
+      replay_statuses["$name"]="failed"
+    fi
   else
     replay_statuses["$name"]="failed"
   fi

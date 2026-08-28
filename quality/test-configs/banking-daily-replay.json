@@ -26,6 +26,12 @@
       "configs": [
         {
           "type": "httpStatusCode"
+        },
+        {
+          "type": "httpResponseBody",
+          "config": {
+            "ignore": "durationMs"
+          }
         }
       ]
     }
