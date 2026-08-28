@@ -342,6 +342,22 @@ for f in "${replay_files[@]}"; do
       --id-only 2>&1) || true
 
     report_id=$(echo "$output" | grep -Eo '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1 || true)
+
+    # A failed launch prints an error message that can itself contain UUIDs
+    # (typically the snapshot ID), and polling a UUID that is not a real report
+    # burns the full wait timeout (3 such hangs blew the 90m job budget on
+    # 2026-08-28). Reject output that carries speedctl's error marker or whose
+    # first UUID is just the snapshot ID echoed back.
+    if echo "$output" | grep -q "✘"; then
+      warn "  attempt $attempt: speedctl infra replay failed"
+      warn "  Output: $output"
+      report_id=""
+    elif [ "$report_id" = "$snapshot_id" ]; then
+      warn "  attempt $attempt: launch failed (extracted ID matches snapshot ID)"
+      warn "  Output: $output"
+      report_id=""
+    fi
+
     if [ -n "$report_id" ]; then
       break
     fi
