@@ -12,8 +12,13 @@ on:
 permissions:
   contents: read
 
+# One group across ALL trigger types: schedule and workflow_dispatch runs replay
+# against the same clusters and the same workloads, so two concurrent runs
+# interleave TrafficReplays and hang each other (observed 2026-08-28: a stale
+# scheduled run held staging while a dispatched run replayed the same SUTs).
+# Newest run wins; the superseded run is cancelled.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -105,9 +110,14 @@ jobs:
   cd-replay-dev:
     name: CD replay (dev)
     runs-on: ubuntu-latest
-    needs: ci-replay
+    # Depend on ci-replay for ordering only: a single flaky CI matrix leg must
+    # not skip cluster validation (it starved both CD jobs daily Aug 25-27).
+    needs: [validate-scheduled-run, ci-replay]
     timeout-minutes: 90
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == 'dev-decoy'
+    if: >-
+      !cancelled() &&
+      needs.validate-scheduled-run.outputs.should-run == 'true' &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == 'dev-decoy')
     steps:
     - name: Checkout
       uses: actions/checkout@v5
@@ -140,9 +150,12 @@ jobs:
   cd-replay-staging:
     name: CD replay (staging)
     runs-on: ubuntu-latest
-    needs: ci-replay
+    needs: [validate-scheduled-run, ci-replay]
     timeout-minutes: 90
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == 'staging-decoy'
+    if: >-
+      !cancelled() &&
+      needs.validate-scheduled-run.outputs.should-run == 'true' &&
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == 'staging-decoy')
     steps:
     - name: Checkout
       uses: actions/checkout@v5

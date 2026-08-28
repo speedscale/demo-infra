@@ -172,6 +172,10 @@ port_forward_log="$runner_temp/${name}-port-forward.log"
 start_service_port_forward "$namespace" "$service" "$local_port" "$service_port" "$port_forward_log"
 
 info "Replaying proxymock scenario: $name"
+# --ignore-body-changes: the gate below only reads requests.failed and the 5xx
+# count, but body-diff scoring of a large mismatched snapshot (banking-accounts:
+# 1021 pairs) runs 7+ silent minutes and has repeatedly OOM-killed the runner VM
+# ("The runner has received a shutdown signal"). Status codes are still scored.
 replay_status=0
 proxymock replay \
   --config "$SPEEDCTL_HOME/config.yaml" \
@@ -179,6 +183,7 @@ proxymock replay \
   --out "$result_dir" \
   --test-against "$target" \
   --rewrite-host \
+  --ignore-body-changes \
   --fail-if "requests.failed > 0" || replay_status=$?
 
 if [ -d "$result_dir" ] && [ "$(find "$result_dir" -type f | wc -l | tr -d ' ')" -gt 0 ]; then
