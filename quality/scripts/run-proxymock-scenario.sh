@@ -171,9 +171,14 @@ fi
 port_forward_log="$runner_temp/${name}-port-forward.log"
 start_service_port_forward "$namespace" "$service" "$local_port" "$service_port" "$port_forward_log"
 
+# Recorded 4xx baseline: replayed 4xx beyond this rate is environment drift
+# (missing users/entities), not app behavior, and must fail the gate.
+recorded_total=$({ grep -rlE '^HTTP/1\.[01] [0-9]{3}' "$snapshot_dir" || true; } | wc -l | tr -d ' ')
+recorded_4xx=$({ grep -rlE '^HTTP/1\.[01] 4[0-9]{2}' "$snapshot_dir" || true; } | wc -l | tr -d ' ')
+
 info "Replaying proxymock scenario: $name"
-# --ignore-body-changes: the gate below only reads requests.failed and the 5xx
-# count, but body-diff scoring of a large mismatched snapshot (banking-accounts:
+# --ignore-body-changes: the gate below only reads requests.failed and the
+# status buckets, but body-diff scoring of a large mismatched snapshot (banking-accounts:
 # 1021 pairs) runs 7+ silent minutes and has repeatedly OOM-killed the runner VM
 # ("The runner has received a shutdown signal"). Status codes are still scored.
 replay_status=0
@@ -196,6 +201,17 @@ if [ -d "$result_dir" ] && [ "$(find "$result_dir" -type f | wc -l | tr -d ' ')"
   if [ "$server_errors" -gt 0 ]; then
     echo "Proxymock report contains $server_errors 5xx response(s)"
     exit 1
+  fi
+
+  replay_4xx=$(jq '[.reliability.statusBreakdown[]? | select(.bucket == "4xx") | .count] | add // 0' "$report_dir/${name}.json")
+  replay_total=$(jq '[.reliability.statusBreakdown[]? | .count] | add // 0' "$report_dir/${name}.json")
+  tolerance_pct="${PROXYMOCK_4XX_TOLERANCE_PCT:-5}"
+  if [ "$replay_total" -gt 0 ] && [ "$recorded_total" -gt 0 ]; then
+    if ! awk -v r4="$replay_4xx" -v rt="$replay_total" -v s4="$recorded_4xx" -v st="$recorded_total" -v tol="$tolerance_pct" \
+        'BEGIN { replay = r4 * 100 / rt; recorded = s4 * 100 / st; exit !(replay <= recorded + tol) }'; then
+      echo "Replayed 4xx rate $replay_4xx/$replay_total exceeds recorded baseline $recorded_4xx/$recorded_total by more than ${tolerance_pct}% (data drift or auth failure, not app behavior)"
+      exit 1
+    fi
   fi
 else
   warn "No proxymock results written for $name"

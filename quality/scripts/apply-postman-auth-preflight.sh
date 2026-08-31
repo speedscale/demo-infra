@@ -129,6 +129,43 @@ ensure_fallback_token() {
   fi
 }
 
+AUTH_REGISTER_PATH="${AUTH_REGISTER_PATH:-/api/users/register}"
+AUTH_EMAIL_DOMAIN="${AUTH_EMAIL_DOMAIN:-northbridge.example}"
+
+register_user() {
+  local username=$1
+  post_json "${AUTH_BASE_URL%/}$AUTH_REGISTER_PATH" \
+    "{\"username\":\"$username\",\"email\":\"$username@$AUTH_EMAIL_DOMAIN\",\"password\":\"$AUTH_PASSWORD\"}"
+  case "$POST_JSON_STATUS" in
+    200|201) touch "$token_cache_dir/.registered.$username"; return 0 ;;
+    409) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Ownership-scoped endpoints 404 unless the JWT's user owns the entity, so each
+# recorded subject needs its own fresh token; one shared token only as a last resort.
+token_cache_dir=$(mktemp -d)
+user_token() {
+  local username=$1 cache_file fresh_token
+  cache_file="$token_cache_dir/$username"
+  if [ -f "$cache_file" ]; then
+    cat "$cache_file"
+    return 0
+  fi
+
+  fresh_token=$(login_token "$username" || true)
+  if [ -z "$fresh_token" ] && register_user "$username"; then
+    fresh_token=$(login_token "$username" || true)
+  fi
+  if [ -z "$fresh_token" ] || [ "$fresh_token" = "null" ]; then
+    return 1
+  fi
+
+  printf '%s' "$fresh_token" > "$cache_file"
+  printf '%s' "$fresh_token"
+}
+
 recorded_tokens=$(mktemp)
 find "$SNAPSHOT_DIR" -type f \( -name '*.md' -o -name '*.json' \) -print0 |
   xargs -0 perl -0ne '
@@ -152,20 +189,18 @@ updated=0
 token_map=$(mktemp)
 recorded_token_total=$(wc -l < "$recorded_tokens" | tr -d ' ')
 echo "Postman auth preflight refreshing $recorded_token_total recorded JWT subject(s)"
+fallback_count=0
 while IFS= read -r recorded_token || [ -n "$recorded_token" ]; do
   [ -n "$recorded_token" ] || continue
   username=$(decode_jwt_subject "$recorded_token")
-  if [ -z "$username" ]; then
-    fresh_token=$FALLBACK_FRESH_TOKEN
-    printf '%s\t%s\n' "$recorded_token" "$fresh_token" >> "$token_map"
-    token_count=$((token_count + 1))
-    if [ $((token_count % 10)) -eq 0 ] || [ "$token_count" -eq "$recorded_token_total" ]; then
-      echo "Postman auth preflight refreshed $token_count/$recorded_token_total subject(s)"
-    fi
-    continue
+  fresh_token=
+  if [ -n "$username" ]; then
+    fresh_token=$(user_token "$username" || true)
   fi
-
-  fresh_token=$FALLBACK_FRESH_TOKEN
+  if [ -z "$fresh_token" ]; then
+    fresh_token=$FALLBACK_FRESH_TOKEN
+    fallback_count=$((fallback_count + 1))
+  fi
 
   printf '%s\t%s\n' "$recorded_token" "$fresh_token" >> "$token_map"
   token_count=$((token_count + 1))
@@ -173,6 +208,9 @@ while IFS= read -r recorded_token || [ -n "$recorded_token" ]; do
     echo "Postman auth preflight refreshed $token_count/$recorded_token_total subject(s)"
   fi
 done < "$recorded_tokens"
+
+registered_count=$(find "$token_cache_dir" -name '.registered.*' | wc -l | tr -d ' ')
+echo "Postman auth preflight minted $(find "$token_cache_dir" -type f ! -name '.registered.*' | wc -l | tr -d ' ') per-user token(s), registered $registered_count missing user(s), fell back to $AUTH_USERNAME for $fallback_count token(s)"
 
 export TOKEN_MAP="$token_map"
 echo "Postman auth preflight applying token replacements"
@@ -202,6 +240,7 @@ while IFS= read -r -d '' rrpair_file; do
 done < <(find "$SNAPSHOT_DIR" -type f \( -name '*.md' -o -name '*.json' \) -print0)
 
 rm -f "$recorded_tokens" "$token_map"
+rm -rf "$token_cache_dir"
 
 if [ "$updated" -eq 0 ]; then
   echo "Postman auth preflight did not update any banking Authorization headers"

@@ -129,6 +129,15 @@ asserts status + `Content-Type` + response schema.
 > `quality/proxymock-prune/<svc>.patterns` to drop non-deterministic Postgres
 > queries (connection setup, `now()`, sequences) that won't match on replay.
 
+## Refreshing the proxymock CI gate (validated 2026-08-28)
+
+The CI proxymock legs replay against the live `banking-replay` services, so a fresh snapshot only replays clean when three things line up. This is the procedure that took banking-accounts from 60% 4xx to 3% (matching its recorded baseline):
+
+1. **Paired fixture:** `db-fixture.sh capture <dir>` (dumps from banking-app), then `KUBE_CONTEXT=<ctx> db-fixture.sh restore <dir>` into banking-replay. Note the dump completion time T0.
+2. **Capture the window [T0, now]:** `speedctl create snapshot -S banking-<svc> --start <now-T0>` — round the lookback DOWN so the window never starts before the fixture; entities created before T0 are in the fixture, entities created in-window are re-created by the replay itself.
+3. **Align server-assigned ID sequences:** the replay re-runs recorded POST creates in recorded order, so they re-assign the same IDs only if the sequence starts where the recording's first create landed. Sim writes that slip between the dump and the window start shift everything. After restoring the fixture, burn IDs through the app API (e.g. POST /api/accounts as any user) until the next ID equals the first created ID in the snapshot, then run one full replay. After that first aligned replay every recorded entity exists with the right owner, and daily replays stay green with no DB work in CI.
+4. **Ownership needs per-user JWTs:** GET/PUT by entity ID 404 unless the token's user owns the entity, so the auth preflight logs in as each recorded JWT subject (registering missing in-window users) rather than substituting one shared token. Replayed registers then 409 — prune `/api/users/register` from snapshots that contain them (see `proxymock-prune/banking-user.patterns`).
+
 ## Refresh cadence
 
 Re-run step 1 whenever the daily gate starts showing data-drift failures (or on a

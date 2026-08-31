@@ -1,0 +1,3 @@
+# Registers replay as 409 once the auth preflight has created the users; the
+# preflight itself covers registration, so drop them from the replayed set.
+/api/users/register
