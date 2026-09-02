@@ -49,6 +49,16 @@
     "sidecarTlsOut": true,
     "logLevel": "info",
     "logsCollected": true,
+    "generatorResources": {
+      "limits": {
+        "cpu": "1",
+        "memory": "2147483648"
+      },
+      "requests": {
+        "cpu": "100m",
+        "memory": "134217728"
+      }
+    },
     "responderResources": {
       "limits": {
         "cpu": "500m",

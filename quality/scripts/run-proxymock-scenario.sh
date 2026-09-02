@@ -139,7 +139,7 @@ if [ -f "$prune_file" ]; then
 
     if [ -s "$prune_patterns_file" ]; then
       while IFS= read -r pattern || [ -n "$pattern" ]; do
-        if [[ "$rrpair_file" =~ $pattern ]] || rg -q -- "$pattern" "$rrpair_file"; then
+        if [[ "$rrpair_file" =~ $pattern ]] || grep -q -- "$pattern" "$rrpair_file"; then
           rm "$rrpair_file"
           prune_count=$((prune_count + 1))
           break

@@ -279,7 +279,9 @@ check_mock_utilization() {
       if [ "${total:-0}" -eq 0 ]; then
         error "  $name: responder received ZERO requests (match+noMatch+passthrough = 0)."
         error "  The snapshot has $out_count mocked outbound service(s), so the SUT never reached the responder."
-        error "  Likely causes: TLS trust mismatch in the app namespace speedscale-certs copy, or the operator failed to patch the SUT (missing control-plane certs)."
+        error "  Likely causes: the recorded inbound port no longer matches the service (FailedInServicePortMapping, generator sends nothing),"
+        error "  the replayed writes 4xx against a drifted DB so the SUT never calls its mocked dependencies, TLS trust mismatch in the"
+        error "  app namespace speedscale-certs copy, or the operator failed to patch the SUT. Check the report's replay-settings warnings first."
         return 1
       fi
       info "  $name: responder handled $total request(s)"
