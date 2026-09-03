@@ -52,11 +52,43 @@ jobs:
 
         echo "should-run=true" >> "$GITHUB_OUTPUT"
 
-  ci-replay:
-    name: CI replay (proxymock)
+  reset-mocks:
+    name: Reset standing mocks
     runs-on: ubuntu-latest
     needs: validate-scheduled-run
     if: needs.validate-scheduled-run.outputs.should-run == 'true'
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        cluster: [dev-decoy, staging-decoy]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+    # The replay-banking-* responder-only TrafficReplays in banking-app are the
+    # app's standing third-party mocks. Recreate them daily so the responder,
+    # redis, and SUT reroute start from a clean provision instead of aging in
+    # place. Skipped for a workflow_dispatch that targets the other cluster.
+    - name: Recreate responder-only mocks
+      if: github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == matrix.cluster
+      run: ./quality/scripts/reset-standing-mocks.sh ${{ matrix.cluster }}
+
+  ci-replay:
+    name: CI replay (proxymock)
+    runs-on: ubuntu-latest
+    # Depend on reset-mocks for ordering only: the mocks live in banking-app and
+    # their rollout competes for node capacity with the replays, but a failed
+    # reset must not skip the gate.
+    needs: [validate-scheduled-run, reset-mocks]
+    if: >-
+      !cancelled() &&
+      needs.validate-scheduled-run.outputs.should-run == 'true'
     timeout-minutes: 20
     strategy:
       fail-fast: false
