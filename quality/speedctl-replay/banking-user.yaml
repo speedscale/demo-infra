@@ -1,9 +1,12 @@
 name: banking-user
 workload: banking-user
 namespace: banking-replay
-snapshotID: effa29f8-4a0d-4b20-a142-664de00ab4e6
-devSnapshotID: fb2382d4-40f4-48a1-a146-172830ede77d
-stagingSnapshotID: fb2382d4-40f4-48a1-a146-172830ede77d
+# Captured 2026-09-04. Inbound only: banking-app's outbound goes to the standing
+# responder-only mocks, so the sidecar records nothing to mock. The June 18 snapshot
+# replayed registers as 409 and logins as 401 against today's banking-replay DB.
+snapshotID: c75078f4-852f-43e5-aedc-efc2a6de9adf
+devSnapshotID: 31d5e613-b7c1-401d-bdb1-87ca0941e70a
+stagingSnapshotID: c75078f4-852f-43e5-aedc-efc2a6de9adf
 proxymockSnapshotID: 30546f66-7ea4-4893-be71-af818e568635
 testConfigID: banking-daily-replay
 service: banking-user
