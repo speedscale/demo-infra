@@ -95,6 +95,15 @@ while true; do
 done
 info "Inventory removed"
 
+# The operator names the responder's Istio PeerAuthentication after the env-id
+# (the TR name) and refuses to init if one already exists, but its cleanup does
+# not always remove it (staging 2026-09-07, dev 2026-09-06: every TR stuck on
+# "failed to create responder istio peer auth policy: resource already exists").
+if kubectl api-resources --api-group=security.istio.io -o name 2>/dev/null | grep -q '^peerauthentications'; then
+  info "Removing leftover PeerAuthentication policies"
+  kubectl -n "$NS" delete peerauthentication "${trs[@]}" --ignore-not-found
+fi
+
 # --- recreate ---
 # ArgoCD selfHeal would recreate these on its next refresh; applying the saved
 # manifests now makes the timing deterministic and is a no-op if it already did.

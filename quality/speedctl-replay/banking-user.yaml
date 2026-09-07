@@ -1,11 +1,12 @@
 name: banking-user
 workload: banking-user
 namespace: banking-replay
-# Captured 2026-09-04. Inbound only: banking-app's outbound goes to the standing
-# responder-only mocks, so the sidecar records nothing to mock. The June 18 snapshot
-# replayed registers as 409 and logins as 401 against today's banking-replay DB.
+# Captured 2026-09-04 on staging-decoy (sidecar capture) and pushed to both tenants.
+# It includes banking-postgres, so registers and logins are served from the recording
+# and the leg stays deterministic across runs; an inbound-only capture passes once,
+# then every register replays as 409 and the responder sees nothing.
 snapshotID: c75078f4-852f-43e5-aedc-efc2a6de9adf
-devSnapshotID: 31d5e613-b7c1-401d-bdb1-87ca0941e70a
+devSnapshotID: c75078f4-852f-43e5-aedc-efc2a6de9adf
 stagingSnapshotID: c75078f4-852f-43e5-aedc-efc2a6de9adf
 proxymockSnapshotID: 30546f66-7ea4-4893-be71-af818e568635
 testConfigID: banking-daily-replay
