@@ -100,9 +100,25 @@ info "Connecting to cluster: $CLUSTER_NAME"
 "$SCRIPT_DIR/connect-cluster.sh" "$CLUSTER_NAME"
 
 info "Pulling snapshot: $snapshot_id"
-proxymock cloud pull snapshot "$snapshot_id" \
-  --config "$SPEEDCTL_HOME/config.yaml" \
-  --out "$snapshot_dir"
+# The pull fetches short-lived S3 credentials from the tenant API first; that
+# call has timed out on an otherwise healthy day (banking-ai, 2026-09-07).
+pulled=false
+for attempt in 1 2 3; do
+  rm -rf "$snapshot_dir"
+  mkdir -p "$snapshot_dir"
+  if proxymock cloud pull snapshot "$snapshot_id" \
+      --config "$SPEEDCTL_HOME/config.yaml" \
+      --out "$snapshot_dir"; then
+    pulled=true
+    break
+  fi
+  warn "Snapshot pull attempt $attempt failed"
+  [ "$attempt" -lt 3 ] && sleep 15
+done
+if [ "$pulled" != true ]; then
+  echo "Could not pull snapshot $snapshot_id after 3 attempts"
+  exit 1
+fi
 
 if [ -f "$prune_file" ]; then
   info "Pruning proxymock requests listed in $prune_file"
