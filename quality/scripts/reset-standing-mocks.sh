@@ -105,11 +105,27 @@ if kubectl api-resources --api-group=security.istio.io -o name 2>/dev/null | gre
 fi
 
 # --- recreate ---
-# ArgoCD selfHeal would recreate these on its next refresh; applying the saved
-# manifests now makes the timing deterministic and is a no-op if it already did.
+# ArgoCD selfHeal recreates these on its next refresh, often within the few
+# seconds the teardown takes; applying the saved manifests now makes the timing
+# deterministic and is a no-op once it has. kubectl apply is GET-then-POST, so
+# a selfHeal landing between the two fails with AlreadyExists (staging-decoy
+# 2026-09-09 through 2026-09-14); the retry patches the recreated object.
+apply_tr() {
+  local f=$1 attempt
+  for attempt in 1 2 3 4 5; do
+    if kubectl apply -f "$f"; then
+      return 0
+    fi
+    if [ "$attempt" -lt 5 ]; then
+      warn "  apply failed (attempt $attempt/5); retrying"
+      sleep 2
+    fi
+  done
+  return 1
+}
 info "Re-applying TrafficReplays"
 for tr in "${trs[@]}"; do
-  kubectl apply -f "$workdir/$tr.json"
+  apply_tr "$workdir/$tr.json"
 done
 
 info "Waiting for Running and MocksReady"
