@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: banking-compliance-mock
+data:
+  default.conf: 'server { listen 8080; location /searches { default_type application/json;
+    return 200 ''{"content":{"data":{"total_matches":0,"risk_level":"low"}}}''; }
+    }
+
+    '
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: banking-compliance-mock
+spec:
+  selector:
+    app: banking-compliance-mock
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banking-compliance-mock
+spec:
+  replicas: 1
+  selector:
+    matchLabels: &id001
+      app: banking-compliance-mock
+  template:
+    metadata:
+      labels: *id001
+      annotations: {}
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.28-alpine
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            memory: 64Mi
+        volumeMounts:
+        - name: config
+          mountPath: /etc/nginx/conf.d
+        readinessProbe:
+          httpGet:
+            path: /searches
+            port: 8080
+      volumes:
+      - name: config
+        configMap:
+          name: banking-compliance-mock
