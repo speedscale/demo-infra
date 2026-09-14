@@ -1,0 +1,5 @@
+name: byoc-gcs-validation
+provider: gke
+project: speedscale-demos
+zone: us-central1-a
+context: gke_speedscale-demos_us-central1-a_byoc-gcs-validation

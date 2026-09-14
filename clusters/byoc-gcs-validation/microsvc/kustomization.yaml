@@ -1,0 +1,193 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: banking-app
+resources:
+- https://github.com/speedscale/microsvc//kubernetes/base?ref=4fec0db33158d5a6d8f69d68b7ae2a6f1d2b2e6b
+- compliance-mock.yaml
+patches:
+- target:
+    kind: ConfigMap
+    name: app-config
+  patch: |
+    - op: replace
+      path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+      value: http://byoc-demo-gcs-datadog.byoc-gcs-validation.svc.cluster.local:4317
+    - op: replace
+      path: /data/OTEL_LOGS_EXPORTER
+      value: none
+    - op: replace
+      path: /data/OTEL_METRICS_EXPORTER
+      value: none
+    - op: replace
+      path: /data/OTEL_RESOURCE_ATTRIBUTES
+      value: service.namespace=banking-app,deployment.environment=partner-demo
+- target:
+    kind: ConfigMap
+    name: banking-accounts-config
+  patch: |
+    - op: replace
+      path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+      value: http://byoc-demo-gcs-datadog.byoc-gcs-validation.svc.cluster.local:4317
+    - op: replace
+      path: /data/OTEL_LOGS_EXPORTER
+      value: none
+    - op: replace
+      path: /data/OTEL_METRICS_EXPORTER
+      value: none
+- target:
+    kind: ConfigMap
+    name: banking-ai-config
+  patch: |
+    - op: replace
+      path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+      value: http://byoc-demo-gcs-datadog.byoc-gcs-validation.svc.cluster.local:4318
+    - op: replace
+      path: /data/OTEL_RESOURCE_ATTRIBUTES
+      value: service.namespace=banking-app,deployment.environment=partner-demo
+- target:
+    kind: ConfigMap
+    name: banking-frontend-config
+  patch: |
+    - op: replace
+      path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+      value: http://byoc-demo-gcs-datadog.byoc-gcs-validation.svc.cluster.local:4318/v1/traces
+    - op: replace
+      path: /data/OTEL_LOGS_EXPORTER
+      value: none
+    - op: replace
+      path: /data/OTEL_METRICS_EXPORTER
+      value: none
+    - op: replace
+      path: /data/OTEL_RESOURCE_ATTRIBUTES
+      value: service.namespace=banking-app,deployment.environment=partner-demo
+- target:
+    kind: ConfigMap
+    name: banking-gateway-config
+  patch: |
+    - op: replace
+      path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+      value: http://byoc-demo-gcs-datadog.byoc-gcs-validation.svc.cluster.local:4317
+    - op: replace
+      path: /data/OTEL_LOGS_EXPORTER
+      value: none
+    - op: replace
+      path: /data/OTEL_METRICS_EXPORTER
+      value: none
+- target:
+    kind: ConfigMap
+    name: banking-sim-config
+  patch: |
+    - op: replace
+      path: /data/AI_CHAT_ENABLED
+      value: 'false'
+    - op: replace
+      path: /data/BURST_ENABLED
+      value: 'false'
+    - op: replace
+      path: /data/CONCURRENT_USERS
+      value: '1'
+    - op: replace
+      path: /data/EXISTING_USER_PERCENTAGE
+      value: '100'
+    - op: replace
+      path: /data/EXPORT_STATEMENT_ENABLED
+      value: 'false'
+    - op: replace
+      path: /data/MAX_ACTION_DELAY
+      value: '10000'
+    - op: replace
+      path: /data/MIN_ACTION_DELAY
+      value: '5000'
+    - op: replace
+      path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+      value: http://byoc-demo-gcs-datadog.byoc-gcs-validation.svc.cluster.local:4317
+    - op: replace
+      path: /data/OTEL_LOGS_EXPORTER
+      value: none
+    - op: replace
+      path: /data/OTEL_METRICS_EXPORTER
+      value: none
+    - op: replace
+      path: /data/OTEL_RESOURCE_ATTRIBUTES
+      value: service.namespace=banking-app,deployment.environment=partner-demo
+- target:
+    kind: ConfigMap
+    name: banking-transactions-config
+  patch: |
+    - op: replace
+      path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+      value: http://byoc-demo-gcs-datadog.byoc-gcs-validation.svc.cluster.local:4317
+    - op: replace
+      path: /data/OTEL_LOGS_EXPORTER
+      value: none
+    - op: replace
+      path: /data/OTEL_METRICS_EXPORTER
+      value: none
+- target:
+    kind: ConfigMap
+    name: banking-user-config
+  patch: |
+    - op: replace
+      path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+      value: http://byoc-demo-gcs-datadog.byoc-gcs-validation.svc.cluster.local:4317
+    - op: replace
+      path: /data/OTEL_LOGS_EXPORTER
+      value: none
+    - op: replace
+      path: /data/OTEL_METRICS_EXPORTER
+      value: none
+- target:
+    kind: Deployment
+  patch: |
+    - op: add
+      path: /spec/template/metadata/annotations/sidecar.istio.io~1inject
+      value: 'false'
+    - op: add
+      path: /spec/template/metadata/labels/byoc-validation
+      value: app
+    - op: add
+      path: /spec/template/spec/hostAliases
+      value:
+      - hostnames:
+        - api.stripe.com
+        - api-m.sandbox.paypal.com
+        - api.complyadvantage.com
+        - api.ratings.moodys.com
+        - hooks.slack.com
+        - api.sendgrid.com
+        - api.twilio.com
+        - api.sift.com
+        - minfraud.maxmind.com
+        - sandbox.socure.com
+        - netverify.com
+        - haveibeenpwned.com
+        - api.anthropic.com
+        - api.openai.com
+        - generativelanguage.googleapis.com
+        - api.x.ai
+        - openrouter.ai
+        ip: 127.0.0.1
+- target:
+    kind: Deployment
+    name: banking-transactions
+  patch: |
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: PAYMENT_COMPLY_BASE_URL
+        value: http://banking-compliance-mock
+- target:
+    kind: Deployment
+    name: banking-sim
+  patch: |
+    - op: replace
+      path: /spec/replicas
+      value: 0
+- target:
+    kind: HorizontalPodAutoscaler
+  patch: |
+    $patch: delete
+    apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    metadata:
+      name: simulation-client-hpa
