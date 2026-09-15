@@ -21,16 +21,14 @@ class FanoutTests(unittest.TestCase):
             },
         }
 
-    def test_destinations_are_independent_and_idempotent(self):
+    def test_dynatrace_is_idempotent_and_preserves_other_exporters(self):
         config = copy.deepcopy(self.config)
         manage.fanout(config, "dynatrace", True)
         manage.fanout(config, "dynatrace", True)
-        manage.fanout(config, "newrelic", True)
         self.assertEqual(config["service"]["pipelines"]["traces"]["exporters"].count("otlp/dynatrace-partner"), 1)
-        self.assertIn("otlp/newrelic-partner", config["service"]["pipelines"]["logs"]["exporters"])
         manage.fanout(config, "dynatrace", False)
         self.assertNotIn("otlp/dynatrace-partner", config["exporters"])
-        self.assertIn("otlp/newrelic-partner", config["exporters"])
+        self.assertEqual(config["service"]["pipelines"]["traces"]["exporters"], ["otlp"])
         self.assertEqual(config["service"]["pipelines"]["logs"]["exporters"][0], "debug")
 
 

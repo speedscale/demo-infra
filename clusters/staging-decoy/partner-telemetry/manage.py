@@ -14,12 +14,6 @@ DESTINATIONS = {
         "namespace": "byoc-dynatrace",
         "signals": ("traces",),
     },
-    "newrelic": {
-        "exporter": "otlp/newrelic-partner",
-        "endpoint": "otel-collector.byoc-newrelic.svc.cluster.local:4317",
-        "namespace": "byoc-newrelic",
-        "signals": ("traces", "logs"),
-    },
 }
 
 
@@ -76,6 +70,7 @@ def main():
     if enabled:
         if not args.partner_account_verified:
             parser.error("Verify the destination partner account, then pass --partner-account-verified")
+        kubectl(args.context, spec["namespace"], "rollout", "restart", "deployment/otel-collector")
         kubectl(
             args.context,
             spec["namespace"],
