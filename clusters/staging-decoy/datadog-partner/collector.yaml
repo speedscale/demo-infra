@@ -8,13 +8,14 @@ receivers:
 processors:
   memory_limiter:
     check_interval: 1s
-    limit_mib: 400
-    spike_limit_mib: 80
+    limit_mib: 900
+    spike_limit_mib: 180
   filter/banking:
     error_mode: propagate
     traces:
       span:
-      - resource.attributes["service.namespace"] != "banking-app"
+      - resource.attributes["service.namespace"] != nil and resource.attributes["service.namespace"] != "banking-app"
+      - resource.attributes["service.name"] == nil or not IsMatch(resource.attributes["service.name"], "^(api-gateway|accounts-service|transactions-service|user-service|frontend|fraud-service|notification-service|ai-service)$")
     logs:
       log_record:
       - log.body["namespace"] != "banking-app"

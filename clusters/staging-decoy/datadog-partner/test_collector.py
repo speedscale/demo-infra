@@ -114,6 +114,24 @@ try:
             time.sleep(0.3)
     else:
         raise RuntimeError("collector not ready")
+    resources = []
+    for name, namespace in [("api-gateway", None), ("accounts-service", "banking-app"), ("api-gateway", "production"), ("unrelated", None)]:
+        attrs = {"service.name": name}
+        if namespace:
+            attrs["service.namespace"] = namespace
+        resources.append({
+            "resource": {"attributes": [{"key": k, "value": value(v)} for k, v in attrs.items()]},
+            "scopeSpans": [{"spans": [{
+                "traceId": "11111111111111111111111111111111",
+                "spanId": "2222222222222222", "name": name,
+                "startTimeUnixNano": str(time.time_ns()),
+                "endTimeUnixNano": str(time.time_ns() + 1000000)
+            }]}]
+        })
+    urllib.request.urlopen(urllib.request.Request(
+        "http://localhost:14318/v1/traces",
+        data=json.dumps({"resourceSpans": resources}).encode(),
+        headers={"Content-Type": "application/json"}), timeout=3)
     time.sleep(2)
 finally:
     subprocess.run(["docker", "stop", cid], stdout=subprocess.DEVNULL, check=True)
@@ -152,3 +170,9 @@ assert all(
 print(
     "PASS: namespace and authentication filters, full GCS captures, link-only Datadog logs, service mapping, outbound span and inbound trace correlation"
 )
+
+spans = [span for line in s.splitlines()
+         for resource in json.loads(line).get("resourceSpans", [])
+         for scope in resource["scopeSpans"] for span in scope["spans"]]
+assert sorted(span["name"] for span in spans) == ["accounts-service", "api-gateway"]
+print("PASS: banking Java spans without namespace accepted; other namespaces and services rejected")
