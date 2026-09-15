@@ -42,4 +42,6 @@ The Java SDK currently omits `service.namespace`. Trace filtering accepts only t
 
 The Datadog connector derives APM statistics from the filtered banking traces and feeds a dedicated metrics pipeline. Exporting spans alone supports trace searches but does not populate APM service charts.
 
+The collector marks server spans with HTTP 5xx responses as errors. It also converts Java `exception` span events into Datadog errors and preserves `error.type`, `error.message`, and `error.stack`. Ordinary HTTP 4xx responses remain non-error spans unless the application records an exception.
+
 Use `env:partner-demo` and the current service name in Trace Explorer. Clear stale operation filters such as `http.client.request` when switching from older recordings; select a current operation from the service page. The service charts start when the connector is enabled and do not backfill earlier traffic.

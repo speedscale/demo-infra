@@ -33,6 +33,19 @@ processors:
     - key: deployment.cluster
       value: staging-decoy
       action: upsert
+  transform/errors:
+    error_mode: propagate
+    trace_statements:
+    - context: span
+      statements:
+      - set(span.status.code, STATUS_CODE_ERROR) where span.attributes["http.status_code"] != nil and span.attributes["http.status_code"] >= 500
+      - set(span.status.code, STATUS_CODE_ERROR) where span.attributes["http.response.status_code"] != nil and span.attributes["http.response.status_code"] >= 500
+    - context: spanevent
+      statements:
+      - set(span.status.code, STATUS_CODE_ERROR) where spanevent.name == "exception"
+      - set(span.attributes["error.type"], spanevent.attributes["exception.type"]) where spanevent.name == "exception" and spanevent.attributes["exception.type"] != nil
+      - set(span.attributes["error.message"], spanevent.attributes["exception.message"]) where spanevent.name == "exception" and spanevent.attributes["exception.message"] != nil
+      - set(span.attributes["error.stack"], spanevent.attributes["exception.stacktrace"]) where spanevent.name == "exception" and spanevent.attributes["exception.stacktrace"] != nil
   transform/capture:
     error_mode: propagate
     log_statements:
@@ -141,6 +154,7 @@ service:
       - memory_limiter
       - filter/banking
       - resource/partner
+      - transform/errors
       - batch
       exporters:
       - datadog

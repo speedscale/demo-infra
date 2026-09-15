@@ -130,11 +130,44 @@ try:
                 "endTimeUnixNano": str(time.time_ns() + 1000000)
             }]}]
         })
+    resources.append({
+        "resource": {"attributes": [{"key": "service.name", "value": value("api-gateway")}]},
+        "scopeSpans": [{"spans": [
+            {
+                "traceId": "33333333333333333333333333333333",
+                "spanId": "4444444444444444", "name": "server-500", "kind": 2,
+                "startTimeUnixNano": str(time.time_ns()),
+                "endTimeUnixNano": str(time.time_ns() + 1000000),
+                "attributes": [{"key": "http.status_code", "value": {"intValue": "500"}}],
+            },
+            {
+                "traceId": "55555555555555555555555555555555",
+                "spanId": "6666666666666666", "name": "exception-span", "kind": 1,
+                "startTimeUnixNano": str(time.time_ns()),
+                "endTimeUnixNano": str(time.time_ns() + 1000000),
+                "events": [{
+                    "timeUnixNano": str(time.time_ns()), "name": "exception",
+                    "attributes": [
+                        {"key": "exception.type", "value": value("java.lang.RuntimeException")},
+                        {"key": "exception.message", "value": value("test failure")},
+                        {"key": "exception.stacktrace", "value": value("example.Test.run(Test.java:10)")},
+                    ],
+                }],
+            },
+            {
+                "traceId": "77777777777777777777777777777777",
+                "spanId": "8888888888888888", "name": "client-400", "kind": 2,
+                "startTimeUnixNano": str(time.time_ns()),
+                "endTimeUnixNano": str(time.time_ns() + 1000000),
+                "attributes": [{"key": "http.status_code", "value": {"intValue": "400"}}],
+            },
+        ]}]
+    })
     urllib.request.urlopen(urllib.request.Request(
         "http://localhost:14318/v1/traces",
         data=json.dumps({"resourceSpans": resources}).encode(),
         headers={"Content-Type": "application/json"}), timeout=3)
-    time.sleep(12)
+    time.sleep(20)
 finally:
     subprocess.run(["docker", "stop", cid], stdout=subprocess.DEVNULL, check=True)
 s = (p / "dd.json").read_text()
@@ -176,8 +209,21 @@ print(
 spans = [span for line in s.splitlines()
          for resource in json.loads(line).get("resourceSpans", [])
          for scope in resource["scopeSpans"] for span in scope["spans"]]
-assert sorted(span["name"] for span in spans) == ["accounts-service", "api-gateway"]
+assert sorted(span["name"] for span in spans) == ["accounts-service", "api-gateway", "client-400", "exception-span", "server-500"]
 print("PASS: banking Java spans without namespace accepted; other namespaces and services rejected")
+
+statuses = {span["name"]: span.get("status", {}).get("code", 0) for span in spans}
+assert statuses["server-500"] == 2
+assert statuses["exception-span"] == 2
+assert statuses["client-400"] != 2
+exception = next(span for span in spans if span["name"] == "exception-span")
+error_attributes = {item["key"]: item["value"]["stringValue"] for item in exception["attributes"] if item["key"].startswith("error.")}
+assert error_attributes == {
+    "error.type": "java.lang.RuntimeException",
+    "error.message": "test failure",
+    "error.stack": "example.Test.run(Test.java:10)",
+}
+print("PASS: 5xx and exception spans are errors with details; client 4xx remains non-error")
 
 assert any(json.loads(line).get("resourceMetrics") for line in s.splitlines()), "APM statistics missing"
 print("PASS: Datadog connector emits APM statistics from accepted banking spans")
