@@ -17,6 +17,43 @@ spec:
     kustomize:
       patches:
         - target:
+            kind: ConfigMap
+            name: banking-user-config
+          patch: &grpc-otel-endpoint |-
+            - op: replace
+              path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://partner-trace-router.observability:4317
+        - target:
+            kind: ConfigMap
+            name: banking-accounts-config
+          patch: *grpc-otel-endpoint
+        - target:
+            kind: ConfigMap
+            name: banking-transactions-config
+          patch: *grpc-otel-endpoint
+        - target:
+            kind: ConfigMap
+            name: banking-gateway-config
+          patch: *grpc-otel-endpoint
+        - target:
+            kind: ConfigMap
+            name: banking-sim-config
+          patch: *grpc-otel-endpoint
+        - target:
+            kind: ConfigMap
+            name: banking-frontend-config
+          patch: |-
+            - op: replace
+              path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://partner-trace-router.observability:4318/v1/traces
+        - target:
+            kind: ConfigMap
+            name: banking-ai-config
+          patch: |-
+            - op: replace
+              path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://partner-trace-router.observability:4318
+        - target:
             kind: Deployment
             name: banking-transactions
           patch: |-
