@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: otel-collector-config
-  namespace: byoc-dynatrace
+  namespace: byoc-newrelic
 data:
   otel.yaml: |
     receivers:
@@ -14,12 +14,22 @@ data:
             endpoint: 0.0.0.0:4318
 
     processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 400
+        spike_limit_mib: 80
       filter/banking:
         error_mode: propagate
         traces:
           span:
             - resource.attributes["service.namespace"] != nil and resource.attributes["service.namespace"] != "banking-app"
             - resource.attributes["service.name"] == nil or not IsMatch(resource.attributes["service.name"], "^(api-gateway|accounts-service|transactions-service|user-service|frontend|fraud-service|notification-service|ai-service)$")
+        logs:
+          log_record:
+            - log.body["namespace"] != "banking-app"
+            - log.body["msgType"] != "rrpair"
+            - log.body["l7protocol"] != "http"
+            - IsMatch(log.body["http"]["req"]["uri"], "(?i)/api/users/(login|register|refresh|reset|password)")
       resource/partner:
         attributes:
           - key: deployment.environment
@@ -31,22 +41,16 @@ data:
           - key: deployment.cluster
             value: staging-decoy
             action: upsert
-      # RRPair log records carry full request/response bodies, so batches must
-      # stay far below Dynatrace's 10MiB OTLP payload cap (the operator-managed
-      # telemetry-ingest collector batches ~1800 records and gets HTTP 413).
       batch:
         send_batch_size: 100
         send_batch_max_size: 200
         timeout: 5s
 
     exporters:
-      # Straight to the tenant OTLP API over public TLS; skips the in-cluster
-      # ActiveGate and its payload limit. Token comes from the byoc-dynatrace
-      # secret (created out-of-band, not in git).
       otlphttp:
-        endpoint: https://uim8926h.sprint.dynatracelabs.com/api/v2/otlp
+        endpoint: https://otlp.nr-data.net
         headers:
-          Authorization: Api-Token ${env:DT_INGEST_TOKEN}
+          api-key: ${env:NEW_RELIC_LICENSE_KEY}
 
     extensions:
       health_check:
@@ -57,20 +61,18 @@ data:
       pipelines:
         traces:
           receivers: [otlp]
-          processors: [filter/banking, resource/partner, batch]
+          processors: [memory_limiter, filter/banking, resource/partner, batch]
           exporters: [otlphttp]
         logs:
           receivers: [otlp]
-          processors: [batch]
+          processors: [memory_limiter, filter/banking, resource/partner, batch]
           exporters: [otlphttp]
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: otel-collector
-  namespace: byoc-dynatrace
-  labels:
-    app: otel-collector
+  namespace: byoc-newrelic
 spec:
   replicas: 1
   selector:
@@ -85,14 +87,14 @@ spec:
     spec:
       containers:
         - name: otel-collector
-          image: otel/opentelemetry-collector-contrib:0.108.0
+          image: otel/opentelemetry-collector-contrib:0.160.0@sha256:799dc6cf12c96192af37b5bdba804da8c10b3bc563b43cb90c3f3c58d9572ad6
           args: ["--config=/etc/otel/otel.yaml"]
           env:
-            - name: DT_INGEST_TOKEN
+            - name: NEW_RELIC_LICENSE_KEY
               valueFrom:
                 secretKeyRef:
-                  name: byoc-dynatrace
-                  key: dataIngestToken
+                  name: byoc-newrelic
+                  key: license-key
           ports:
             - containerPort: 4317
             - containerPort: 4318
@@ -102,9 +104,8 @@ spec:
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
+              memory: 256Mi
             limits:
-              cpu: 500m
               memory: 512Mi
           livenessProbe:
             httpGet:
@@ -123,7 +124,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: otel-collector
-  namespace: byoc-dynatrace
+  namespace: byoc-newrelic
 spec:
   selector:
     app: otel-collector
