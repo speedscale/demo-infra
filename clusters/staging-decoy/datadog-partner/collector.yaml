@@ -14,47 +14,88 @@ processors:
     error_mode: propagate
     traces:
       span:
-        - 'resource.attributes["service.namespace"] != "banking-app"'
+      - resource.attributes["service.namespace"] != "banking-app"
     logs:
       log_record:
-        - 'log.body["namespace"] != "banking-app"'
-        - 'log.body["msgType"] != "rrpair"'
-        - 'log.body["l7protocol"] != "http"'
-        - 'IsMatch(log.body["http"]["req"]["uri"], "(?i)/api/users/(login|register|refresh|reset|password)")'
+      - log.body["namespace"] != "banking-app"
+      - log.body["msgType"] != "rrpair"
+      - log.body["l7protocol"] != "http"
+      - IsMatch(log.body["http"]["req"]["uri"], "(?i)/api/users/(login|register|refresh|reset|password)")
   resource/partner:
     attributes:
-      - {key: deployment.environment, value: partner-demo, action: upsert}
-      - {key: deployment.environment.name, value: partner-demo, action: upsert}
+    - key: deployment.environment
+      value: partner-demo
+      action: upsert
+    - key: deployment.environment.name
+      value: partner-demo
+      action: upsert
+    - key: deployment.cluster
+      value: staging-decoy
+      action: upsert
   transform/capture:
     error_mode: propagate
     log_statements:
-      - context: log
-        statements:
-          - set(resource.attributes["service.name"], log.body["service"])
-          - set(resource.attributes["service.name"], "transactions-service") where log.body["service"] == "banking-transactions"
-          - set(resource.attributes["service.name"], "accounts-service") where log.body["service"] == "banking-accounts"
-          - set(resource.attributes["service.name"], "user-service") where log.body["service"] == "banking-user"
-          - set(resource.attributes["service.name"], "api-gateway") where log.body["service"] == "banking-gateway"
-          - set(resource.attributes["service.name"], "frontend") where log.body["service"] == "banking-frontend"
-          - set(resource.attributes["service.name"], "fraud-service") where log.body["service"] == "banking-fraud"
-          - set(resource.attributes["service.name"], "notification-service") where log.body["service"] == "banking-notification"
-          - set(resource.attributes["service.name"], "ai-service") where log.body["service"] == "banking-ai"
-          - set(log.attributes["speedscale.workload"], log.body["service"])
-          - set(log.attributes["speedscale.direction"], log.body["direction"])
-          - set(log.cache["parent"], log.body["http"]["req"]["headers"]["Traceparent"][0]) where log.body["http"]["req"]["headers"]["Traceparent"] != nil
-          - set(log.cache["parent"], log.body["http"]["req"]["headers"]["traceparent"][0]) where log.body["http"]["req"]["headers"]["traceparent"] != nil
-          - set(log.cache["context"], ExtractPatterns(log.cache["parent"], "^00-(?P<trace>[0-9a-f]{32})-(?P<span>[0-9a-f]{16})-[0-9a-f]{2}$")) where log.cache["parent"] != nil
-          - set(log.trace_id, TraceID(log.cache["context"]["trace"])) where log.cache["context"]["trace"] != nil
-          # An incoming traceparent identifies the caller, not this service's server span.
-          - set(log.span_id, SpanID(log.cache["context"]["span"])) where log.cache["context"]["span"] != nil and log.body["direction"] == "OUT"
-  transform/session-headers:
+    - context: log
+      statements:
+      - set(log.attributes["deployment.cluster"], "staging-decoy")
+      - set(resource.attributes["service.name"], log.body["service"])
+      - set(resource.attributes["service.name"], "transactions-service") where log.body["service"] == "banking-transactions"
+      - set(resource.attributes["service.name"], "accounts-service") where log.body["service"] == "banking-accounts"
+      - set(resource.attributes["service.name"], "user-service") where log.body["service"] == "banking-user"
+      - set(resource.attributes["service.name"], "api-gateway") where log.body["service"] == "banking-gateway"
+      - set(resource.attributes["service.name"], "frontend") where log.body["service"] == "banking-frontend"
+      - set(resource.attributes["service.name"], "fraud-service") where log.body["service"] == "banking-fraud"
+      - set(resource.attributes["service.name"], "notification-service") where log.body["service"] == "banking-notification"
+      - set(resource.attributes["service.name"], "ai-service") where log.body["service"] == "banking-ai"
+      - set(log.attributes["speedscale.workload"], log.body["service"])
+      - set(log.attributes["speedscale.direction"], log.body["direction"])
+      - set(log.cache["parent"], log.body["http"]["req"]["headers"]["Traceparent"][0]) where log.body["http"]["req"]["headers"]["Traceparent"] != nil
+      - set(log.cache["parent"], log.body["http"]["req"]["headers"]["traceparent"][0]) where log.body["http"]["req"]["headers"]["traceparent"] != nil
+      - set(log.cache["context"], ExtractPatterns(log.cache["parent"], "^00-(?P<trace>[0-9a-f]{32})-(?P<span>[0-9a-f]{16})-[0-9a-f]{2}$")) where log.cache["parent"]
+        != nil
+      - set(log.trace_id, TraceID(log.cache["context"]["trace"])) where log.cache["context"]["trace"] != nil
+      - set(log.span_id, SpanID(log.cache["context"]["span"])) where log.cache["context"]["span"] != nil and log.body["direction"] == "OUT"
+      - set(log.span_id, SpanID(0x0000000000000000)) where log.body["direction"] == "IN"
+  batch:
+    timeout: 1s
+    send_batch_size: 100
+  filter/traced:
+    error_mode: propagate
+    logs:
+      log_record:
+      - log.trace_id == TraceID(0x00000000000000000000000000000000)
+      - resource.attributes["service.name"] == nil
+      - resource.attributes["service.name"] == ""
+      - not IsMatch(resource.attributes["service.name"], "^[A-Za-z0-9][A-Za-z0-9._-]*$")
+  transform/routing:
     error_mode: propagate
     log_statements:
-      - context: log
-        statements:
-          - delete_matching_keys(log.body["http"]["req"]["headers"], "(?i)^(authorization|proxy-authorization|cookie|set-cookie|x-api-key)$")
-          - delete_matching_keys(log.body["http"]["res"]["headers"], "(?i)^(authorization|proxy-authorization|cookie|set-cookie|x-api-key)$")
-  batch:
+    - context: log
+      statements:
+      - set(log.attributes["service.name"], resource.attributes["service.name"])
+      - set(log.attributes["trace_id"], log.trace_id.string)
+  groupbyattrs:
+    keys:
+    - service.name
+    - trace_id
+  transform/prefix:
+    error_mode: propagate
+    log_statements:
+    - context: resource
+      statements:
+      - set(resource.attributes["gcs.prefix"], Concat([resource.attributes["service.name"], resource.attributes["trace_id"]], "/"))
+  batch/gcs:
+    send_batch_size: 1
+    send_batch_max_size: 1
+    timeout: 1s
+  transform/correlation:
+    error_mode: propagate
+    log_statements:
+    - context: log
+      statements:
+      - set(log.body, Concat(["https://console.cloud.google.com/storage/browser/", "${env:DATADOG_PARTNER_GCS_BUCKET}", "/byoc/", resource.attributes["gcs.prefix"]],
+        ""))
+  batch/datadog:
     timeout: 1s
     send_batch_size: 100
 exporters:
@@ -63,17 +104,71 @@ exporters:
       key: ${env:DATADOG_PARTNER_API_KEY}
       site: ${env:DATADOG_PARTNER_SITE}
     hostname: microsvc-partner-demo
+  google_cloud_storage:
+    bucket:
+      project_id: ${env:DATADOG_PARTNER_GCS_PROJECT}
+      name: ${env:DATADOG_PARTNER_GCS_BUCKET}
+      region: ${env:DATADOG_PARTNER_GCS_REGION}
+      reuse_if_exists: true
+      compression: gzip
+      file_prefix: logs
+      partition:
+        prefix: byoc
+        format: year=%Y/month=%m/day=%d/hour=%H/minute=%M
+    resource_attrs_to_gcs:
+      prefix: gcs.prefix
+    timeout: 30s
+    sending_queue:
+      enabled: true
+      queue_size: 1000
+    retry_on_failure:
+      enabled: true
+      max_elapsed_time: 300s
 extensions:
   health_check:
     endpoint: 0.0.0.0:13133
 service:
-  extensions: [health_check]
+  extensions:
+  - health_check
   pipelines:
     traces:
-      receivers: [otlp]
-      processors: [memory_limiter, filter/banking, resource/partner, batch]
-      exporters: [datadog]
-    logs:
-      receivers: [otlp]
-      processors: [memory_limiter, filter/banking, transform/capture, transform/session-headers, resource/partner, batch]
-      exporters: [datadog]
+      receivers:
+      - otlp
+      processors:
+      - memory_limiter
+      - filter/banking
+      - resource/partner
+      - batch
+      exporters:
+      - datadog
+    logs/gcs:
+      receivers:
+      - otlp
+      processors:
+      - memory_limiter
+      - filter/banking
+      - transform/capture
+      - filter/traced
+      - resource/partner
+      - transform/routing
+      - groupbyattrs
+      - transform/prefix
+      - batch/gcs
+      exporters:
+      - google_cloud_storage
+    logs/correlation:
+      receivers:
+      - otlp
+      processors:
+      - memory_limiter
+      - filter/banking
+      - transform/capture
+      - filter/traced
+      - resource/partner
+      - transform/routing
+      - groupbyattrs
+      - transform/prefix
+      - transform/correlation
+      - batch/datadog
+      exporters:
+      - datadog
