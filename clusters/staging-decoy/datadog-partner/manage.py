@@ -201,6 +201,7 @@ def main():
                                         "image": IMAGE,
                                         "args": ["--config=/conf/collector.yaml"],
                                         "env": [
+                                            {"name": "GOMEMLIMIT", "value": "700MiB"},
                                             {
                                                 "name": "DATADOG_PARTNER_API_KEY",
                                                 "valueFrom": {
@@ -227,7 +228,7 @@ def main():
                                                 "cpu": "100m",
                                                 "memory": "256Mi",
                                             },
-                                            "limits": {"memory": "512Mi"},
+                                            "limits": {"memory": "1Gi"},
                                         },
                                         "readinessProbe": {
                                             "httpGet": {"path": "/", "port": 13133}
