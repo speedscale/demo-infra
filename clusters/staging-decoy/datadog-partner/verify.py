@@ -25,15 +25,16 @@ def search(signal, query):
         "ap2.datadoghq.com",
     }:
         raise SystemExit("Unsupported Datadog site")
+    body = {
+        "filter": {"query": query, "from": "now-15m", "to": "now"},
+        "sort": "-timestamp",
+        "page": {"limit": 100},
+    }
+    if signal == "spans":
+        body = {"data": {"attributes": body, "type": "search_request"}}
     request = urllib.request.Request(
         f"https://api.{values['SITE']}/api/v2/{signal}/events/search",
-        data=json.dumps(
-            {
-                "filter": {"query": query, "from": "now-15m", "to": "now"},
-                "sort": "-timestamp",
-                "page": {"limit": 100},
-            }
-        ).encode(),
+        data=json.dumps(body).encode(),
         headers={
             "Content-Type": "application/json",
             "DD-API-KEY": values["API_KEY"],
@@ -45,12 +46,18 @@ def search(signal, query):
 
 
 def main():
-    logs = search("logs", "env:partner-demo @namespace:banking-app @otel.trace_id:*")
+    logs = search(
+        "logs", "env:partner-demo @deployment.cluster:staging-decoy @otel.trace_id:*"
+    )
     for row in logs:
         log = row["attributes"]
         attrs = log.get("attributes", {})
         otel = attrs.get("otel", {})
         trace = otel.get("trace_id")
+        if not log.get("message", "").startswith(
+            "https://console.cloud.google.com/storage/browser/"
+        ):
+            continue
         if not trace:
             continue
         spans = search("spans", "env:partner-demo trace_id:" + trace)

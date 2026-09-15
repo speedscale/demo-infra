@@ -5,6 +5,7 @@ import argparse
 import base64
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import urllib.request
@@ -51,18 +52,61 @@ def apply(context, objects):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["install", "remove"])
+    parser.add_argument("action", choices=["on", "off", "status", "install", "remove"])
     parser.add_argument("--context", required=True)
     parser.add_argument(
         "--partner-account-verified",
         action="store_true",
         help="Attest these credentials were checked in the dedicated partner organization",
     )
+    parser.add_argument("--gcs-bucket")
+    parser.add_argument("--gcs-project")
+    parser.add_argument("--gcs-region", default="us-central1")
+    parser.add_argument("--gcs-credentials-secret", default="datadog-partner-gcs")
     args = parser.parse_args()
     if args.context != "do-nyc1-staging-decoy":
         parser.error("This demo is scoped to do-nyc1-staging-decoy")
-    enabled = args.action == "install"
+    if args.action == "status":
+        cm = json.loads(
+            kubectl(args.context, "get", "configmap/otel-collector-conf", "-o", "json")
+        )
+        config = yaml.safe_load(cm["data"]["otel-collector-config.yaml"])
+        key = "otlp/datadog-partner"
+        attached = all(
+            key in config["service"]["pipelines"][signal]["exporters"]
+            for signal in ("logs", "traces")
+        )
+        print("Partner fanout: " + ("on" if attached else "off"))
+        print(kubectl(args.context, "get", "deployments", "-l", "app=" + NAME))
+        return
+    enabled = args.action in ("on", "install")
     if enabled:
+        if not args.gcs_bucket or not args.gcs_project:
+            parser.error("Explicit --gcs-bucket and --gcs-project are required")
+        for value in (
+            args.gcs_bucket,
+            args.gcs_project,
+            args.gcs_region,
+            args.gcs_credentials_secret,
+        ):
+            if not re.fullmatch(r"[a-z0-9][a-z0-9._-]*", value):
+                parser.error("Invalid GCS destination or credential secret name")
+        secret = json.loads(
+            kubectl(
+                args.context,
+                "get",
+                "secret/" + args.gcs_credentials_secret,
+                "-o",
+                "json",
+            )
+        )
+        credential = json.loads(
+            base64.b64decode(secret.get("data", {}).get("credentials.json", ""))
+        )
+        if credential.get("type") not in ("service_account", "external_account"):
+            parser.error(
+                "GCS writer must use a dedicated workload identity, not personal ADC"
+            )
         if not args.partner_account_verified:
             parser.error(
                 "Verify the destination partner organization, then pass --partner-account-verified"
@@ -101,6 +145,20 @@ def main():
         apply(
             args.context,
             [
+                {
+                    "apiVersion": "v1",
+                    "kind": "ConfigMap",
+                    "metadata": {
+                        "name": NAME + "-storage",
+                        "namespace": "observability",
+                    },
+                    "data": {
+                        "DATADOG_PARTNER_GCS_BUCKET": args.gcs_bucket,
+                        "DATADOG_PARTNER_GCS_PROJECT": args.gcs_project,
+                        "DATADOG_PARTNER_GCS_REGION": args.gcs_region,
+                        "GOOGLE_APPLICATION_CREDENTIALS": "/gcs/credentials.json",
+                    },
+                },
                 {
                     "apiVersion": "v1",
                     "kind": "Secret",
@@ -157,6 +215,13 @@ def main():
                                                 "value": values["SITE"],
                                             },
                                         ],
+                                        "envFrom": [
+                                            {
+                                                "configMapRef": {
+                                                    "name": NAME + "-storage"
+                                                }
+                                            }
+                                        ],
                                         "resources": {
                                             "requests": {
                                                 "cpu": "100m",
@@ -172,15 +237,26 @@ def main():
                                         },
                                         "volumeMounts": [
                                             {
+                                                "name": "gcs-credentials",
+                                                "mountPath": "/gcs",
+                                                "readOnly": True,
+                                            },
+                                            {
                                                 "name": "config",
                                                 "mountPath": "/conf",
                                                 "readOnly": True,
-                                            }
+                                            },
                                         ],
                                     }
                                 ],
                                 "volumes": [
-                                    {"name": "config", "configMap": {"name": NAME}}
+                                    {
+                                        "name": "gcs-credentials",
+                                        "secret": {
+                                            "secretName": args.gcs_credentials_secret
+                                        },
+                                    },
+                                    {"name": "config", "configMap": {"name": NAME}},
                                 ],
                             },
                         },
@@ -210,6 +286,9 @@ def main():
             "deployment,service,configmap,secret",
             NAME,
             "--ignore-not-found",
+        )
+        kubectl(
+            args.context, "delete", "configmap", NAME + "-storage", "--ignore-not-found"
         )
     print(
         "Partner export "

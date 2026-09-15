@@ -3,9 +3,18 @@ import copy, json, pathlib, subprocess, tempfile, time, urllib.request, yaml
 temporary = tempfile.TemporaryDirectory(prefix="microsvc-partner-")
 p = pathlib.Path(temporary.name)
 config = yaml.safe_load(pathlib.Path(__file__).with_name("collector.yaml").read_text())
-config["exporters"] = {"file": {"path": "/test/output.json"}}
-for pipeline in config["service"]["pipelines"].values():
-    pipeline["exporters"] = ["file"]
+config["exporters"] = {
+    "file/gcs": {"path": "/test/gcs.json"},
+    "file/dd": {"path": "/test/dd.json"},
+}
+for name, pipeline in config["service"]["pipelines"].items():
+    pipeline["exporters"] = ["file/gcs" if name == "logs/gcs" else "file/dd"]
+config["processors"]["transform/correlation"]["log_statements"][0]["statements"] = [
+    s.replace("${env:DATADOG_PARTNER_GCS_BUCKET}", "test-partner-bucket")
+    for s in config["processors"]["transform/correlation"]["log_statements"][0][
+        "statements"
+    ]
+]
 (p / "test.yaml").write_text(yaml.safe_dump(config))
 
 
@@ -108,8 +117,25 @@ try:
     time.sleep(2)
 finally:
     subprocess.run(["docker", "stop", cid], stdout=subprocess.DEVNULL, check=True)
-s = (p / "output.json").read_text()
-assert "secret-marker" not in s, s
+s = (p / "dd.json").read_text()
+assert "secret-marker" not in s, "Datadog output leaked session headers"
+assert (
+    "https://console.cloud.google.com/storage/browser/test-partner-bucket/byoc/transactions-service/11111111111111111111111111111111"
+    in s
+)
+archive = (p / "gcs.json").read_text()
+assert (
+    "secret-marker" in archive
+), "GCS archive must preserve the original captured headers"
+assert (
+    sum(
+        len(scope["logRecords"])
+        for line in archive.splitlines()
+        for r in json.loads(line).get("resourceLogs", [])
+        for scope in r["scopeLogs"]
+    )
+    == 2
+)
 rows = [r for line in s.splitlines() for r in json.loads(line).get("resourceLogs", [])]
 records = [l for r in rows for scope in r["scopeLogs"] for l in scope["logRecords"]]
 assert len(records) == 2, len(records)
@@ -124,5 +150,5 @@ assert all(
     for r in rows
 )
 print(
-    "PASS: namespace and authentication filters, session-header removal, service mapping, outbound span and inbound trace correlation"
+    "PASS: namespace and authentication filters, full GCS captures, link-only Datadog logs, service mapping, outbound span and inbound trace correlation"
 )
