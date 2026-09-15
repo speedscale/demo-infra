@@ -37,3 +37,9 @@ The temporary GKE validation cluster was deleted after validation. Its kubeconfi
 Project: `speedscale-demos`. Bucket: `speedscale-demos-proxymock-gcs-validation`, region `us-central1`. The retained Secret `observability/datadog-partner-gcs` holds a dedicated service-account key for `staging-datadog-writer@speedscale-demos.iam.gserviceaccount.com`; that identity has bucket-scoped object creation and metadata/list access. Turning the demo off retains this credential for the next run. Datadog ingestion settings come from the explicit partner environment variables supplied to `on`, which creates the ingestion Secret. The application key is only needed by local query scripts.
 
 The Java SDK currently omits `service.namespace`. Trace filtering accepts only the enumerated banking service names, with either an absent namespace or `banking-app`; other namespaces and service names are rejected. Continuous traffic uses a 1 GiB collector limit, a 700 MiB Go memory target, and a 900 MiB limiter with 180 MiB spike allowance.
+
+## APM service pages
+
+The Datadog connector derives APM statistics from the filtered banking traces and feeds a dedicated metrics pipeline. Exporting spans alone supports trace searches but does not populate APM service charts.
+
+Use `env:partner-demo` and the current service name in Trace Explorer. Clear stale operation filters such as `http.client.request` when switching from older recordings; select a current operation from the service page. The service charts start when the connector is enabled and do not backfill earlier traffic.

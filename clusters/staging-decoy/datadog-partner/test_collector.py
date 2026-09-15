@@ -9,6 +9,8 @@ config["exporters"] = {
 }
 for name, pipeline in config["service"]["pipelines"].items():
     pipeline["exporters"] = ["file/gcs" if name == "logs/gcs" else "file/dd"]
+    if name == "traces":
+        pipeline["exporters"].append("datadog/apm")
 config["processors"]["transform/correlation"]["log_statements"][0]["statements"] = [
     s.replace("${env:DATADOG_PARTNER_GCS_BUCKET}", "test-partner-bucket")
     for s in config["processors"]["transform/correlation"]["log_statements"][0][
@@ -123,7 +125,7 @@ try:
             "resource": {"attributes": [{"key": k, "value": value(v)} for k, v in attrs.items()]},
             "scopeSpans": [{"spans": [{
                 "traceId": "11111111111111111111111111111111",
-                "spanId": "2222222222222222", "name": name,
+                "spanId": "2222222222222222", "name": name, "kind": 2,
                 "startTimeUnixNano": str(time.time_ns()),
                 "endTimeUnixNano": str(time.time_ns() + 1000000)
             }]}]
@@ -132,7 +134,7 @@ try:
         "http://localhost:14318/v1/traces",
         data=json.dumps({"resourceSpans": resources}).encode(),
         headers={"Content-Type": "application/json"}), timeout=3)
-    time.sleep(2)
+    time.sleep(12)
 finally:
     subprocess.run(["docker", "stop", cid], stdout=subprocess.DEVNULL, check=True)
 s = (p / "dd.json").read_text()
@@ -176,3 +178,6 @@ spans = [span for line in s.splitlines()
          for scope in resource["scopeSpans"] for span in scope["spans"]]
 assert sorted(span["name"] for span in spans) == ["accounts-service", "api-gateway"]
 print("PASS: banking Java spans without namespace accepted; other namespaces and services rejected")
+
+assert any(json.loads(line).get("resourceMetrics") for line in s.splitlines()), "APM statistics missing"
+print("PASS: Datadog connector emits APM statistics from accepted banking spans")

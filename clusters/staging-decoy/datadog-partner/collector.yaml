@@ -99,6 +99,8 @@ processors:
   batch/datadog:
     timeout: 1s
     send_batch_size: 100
+connectors:
+  datadog/apm: {}
 exporters:
   datadog:
     api:
@@ -139,6 +141,14 @@ service:
       - memory_limiter
       - filter/banking
       - resource/partner
+      - batch
+      exporters:
+      - datadog
+      - datadog/apm
+    metrics/apm:
+      receivers:
+      - datadog/apm
+      processors:
       - batch
       exporters:
       - datadog
