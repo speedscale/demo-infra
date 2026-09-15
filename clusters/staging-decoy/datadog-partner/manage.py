@@ -77,7 +77,7 @@ def main():
             for signal in ("logs", "traces")
         )
         print("Partner fanout: " + ("on" if attached else "off"))
-        print(kubectl(args.context, "get", "deployments", "-l", "app=" + NAME))
+        print(kubectl(args.context, "get", "deployment/" + NAME, "--ignore-not-found"))
         return
     enabled = args.action in ("on", "install")
     if enabled:
