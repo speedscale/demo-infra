@@ -1,3 +1,5 @@
+> Retired September 15, 2026: this temporary cluster was removed after release validation. These manifests are retained for reproducibility. The ongoing optional partner demo is managed under `clusters/staging-decoy/datadog-partner`; its GCS identity and live migration acceptance must be completed before enabling it.
+
 # GKE partner banking demo
 
 This overlay migrates the existing `byoc-gcs-validation` GKE demo in `speedscale-demos` to microsvc. Banking runs in `banking-app`; the existing capture agent, forwarder, GCS collector, partner Datadog secret, and direction-split pipeline stay in `byoc-gcs-validation`.
