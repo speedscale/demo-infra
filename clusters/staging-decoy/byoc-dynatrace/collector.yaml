@@ -14,6 +14,23 @@ data:
             endpoint: 0.0.0.0:4318
 
     processors:
+      filter/banking:
+        error_mode: propagate
+        traces:
+          span:
+            - resource.attributes["service.namespace"] != nil and resource.attributes["service.namespace"] != "banking-app"
+            - resource.attributes["service.name"] == nil or not IsMatch(resource.attributes["service.name"], "^(api-gateway|accounts-service|transactions-service|user-service|frontend|fraud-service|notification-service|ai-service)$")
+      resource/partner:
+        attributes:
+          - key: deployment.environment
+            value: partner-demo
+            action: upsert
+          - key: deployment.environment.name
+            value: partner-demo
+            action: upsert
+          - key: deployment.cluster
+            value: staging-decoy
+            action: upsert
       # RRPair log records carry full request/response bodies, so batches must
       # stay far below Dynatrace's 10MiB OTLP payload cap (the operator-managed
       # telemetry-ingest collector batches ~1800 records and gets HTTP 413).
@@ -38,6 +55,10 @@ data:
     service:
       extensions: [health_check]
       pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [filter/banking, resource/partner, batch]
+          exporters: [otlphttp]
         logs:
           receivers: [otlp]
           processors: [batch]
