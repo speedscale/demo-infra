@@ -197,6 +197,8 @@ info "Replaying proxymock scenario: $name"
 # status buckets, but body-diff scoring of a large mismatched snapshot (banking-accounts:
 # 1021 pairs) runs 7+ silent minutes and has repeatedly OOM-killed the runner VM
 # ("The runner has received a shutdown signal"). Status codes are still scored.
+report_file="$report_dir/${name}.json"
+rm -f "$report_file"
 replay_status=0
 proxymock replay \
   --config "$SPEEDCTL_HOME/config.yaml" \
@@ -208,10 +210,32 @@ proxymock replay \
   --fail-if "requests.failed > 0" || replay_status=$?
 
 if [ -d "$result_dir" ] && [ "$(find "$result_dir" -type f | wc -l | tr -d ' ')" -gt 0 ]; then
-  proxymock report \
-    --config "$SPEEDCTL_HOME/config.yaml" \
-    --in "$result_dir" \
-    --out "$report_dir/${name}.json"
+  # Credential timeouts can return zero without writing a report.
+  reported=false
+  for attempt in 1 2 3; do
+    rm -f "$report_file"
+    if proxymock report \
+        --config "$SPEEDCTL_HOME/config.yaml" \
+        --in "$result_dir" \
+        --out "$report_file" \
+        && jq -e '
+          .reliability.statusBreakdown
+          | type == "array" and length > 0
+          and all(.[]; (.bucket | type == "string")
+            and (.count | type == "number" and . >= 0 and . == floor))
+          and ([.[].count] | add > 0)
+        ' "$report_file" >/dev/null 2>&1; then
+      reported=true
+      break
+    fi
+    warn "Report generation attempt $attempt failed or produced an invalid report"
+    [ "$attempt" -lt 3 ] && sleep 15
+  done
+  if [ "$reported" != true ]; then
+    rm -f "$report_file"
+    echo "Could not generate a valid proxymock report for $name after 3 attempts"
+    exit 1
+  fi
 
   server_errors=$(jq '[.reliability.statusBreakdown[]? | select(.bucket == "5xx") | .count] | add // 0' "$report_dir/${name}.json")
   if [ "$server_errors" -gt 0 ]; then
@@ -231,6 +255,7 @@ if [ -d "$result_dir" ] && [ "$(find "$result_dir" -type f | wc -l | tr -d ' ')"
   fi
 else
   warn "No proxymock results written for $name"
+  exit 1
 fi
 
 info "Proxymock report: $report_dir/${name}.json"
