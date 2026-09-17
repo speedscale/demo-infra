@@ -90,10 +90,10 @@ processors:
     send_batch_max_size: 200
 
 exporters:
-  otlphttp/dynatrace:
-    endpoint: ${env:DT_OTLP_ENDPOINT}
+  otlphttp/newrelic:
+    endpoint: https://otlp.nr-data.net
     headers:
-      Authorization: Api-Token ${env:DT_INGEST_TOKEN}
+      api-key: ${env:NEW_RELIC_PARTNER_LICENSE_KEY}
     sending_queue:
       enabled: true
       queue_size: 1000
@@ -111,12 +111,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, filter/banking, resource/partner, transform/errors, batch]
-      exporters: [otlphttp/dynatrace]
+      exporters: [otlphttp/newrelic]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, filter/banking, transform/capture, filter/traced, resource/partner, batch]
-      exporters: [otlphttp/dynatrace]
+      exporters: [otlphttp/newrelic]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, filter/banking, resource/partner, batch]
-      exporters: [otlphttp/dynatrace]
+      exporters: [otlphttp/newrelic]

@@ -1,50 +1,121 @@
-receivers:
-  otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-      http:
-        endpoint: 0.0.0.0:4318
-
-processors:
-  memory_limiter:
-    check_interval: 1s
-    limit_mib: 400
-    spike_limit_mib: 80
-  batch:
-    timeout: 1s
-    send_batch_size: 100
-
-exporters:
-  otlp/original:
-    endpoint: otel-collector.observability.svc.cluster.local:4317
-    tls:
-      insecure: true
-  otlp/datadog:
-    endpoint: datadog-partner.observability.svc.cluster.local:4317
-    tls:
-      insecure: true
-  otlp/dynatrace:
-    endpoint: otel-collector.byoc-dynatrace.svc.cluster.local:4317
-    tls:
-      insecure: true
-
-extensions:
-  health_check:
-    endpoint: 0.0.0.0:13133
-
-service:
-  extensions: [health_check]
-  pipelines:
-    traces:
-      receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [otlp/original, otlp/datadog, otlp/dynatrace]
-    logs:
-      receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [otlp/original]
-    metrics:
-      receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [otlp/original]
+{
+  "receivers": {
+    "otlp/apps": {
+      "protocols": {
+        "grpc": {
+          "endpoint": "0.0.0.0:4317"
+        },
+        "http": {
+          "endpoint": "0.0.0.0:4318"
+        }
+      }
+    },
+    "otlp/captures": {
+      "protocols": {
+        "grpc": {
+          "endpoint": "0.0.0.0:5317"
+        },
+        "http": {
+          "endpoint": "0.0.0.0:5318"
+        }
+      }
+    }
+  },
+  "processors": {
+    "memory_limiter": {
+      "check_interval": "1s",
+      "limit_mib": 400,
+      "spike_limit_mib": 80
+    },
+    "batch": {
+      "timeout": "1s",
+      "send_batch_size": 100
+    }
+  },
+  "exporters": {
+    "otlp/original": {
+      "endpoint": "otel-collector.observability.svc.cluster.local:4317",
+      "tls": {
+        "insecure": true
+      }
+    },
+    "nop/captures": {},
+    "otlp/datadog": {
+      "endpoint": "datadog-partner.observability.svc.cluster.local:4317",
+      "tls": {
+        "insecure": true
+      }
+    },
+    "otlp/dynatrace": {
+      "endpoint": "otel-collector.byoc-dynatrace.svc.cluster.local:4317",
+      "tls": {
+        "insecure": true
+      }
+    }
+  },
+  "extensions": {
+    "health_check": {
+      "endpoint": "0.0.0.0:13133"
+    }
+  },
+  "service": {
+    "extensions": [
+      "health_check"
+    ],
+    "pipelines": {
+      "traces": {
+        "receivers": [
+          "otlp/apps"
+        ],
+        "processors": [
+          "memory_limiter",
+          "batch"
+        ],
+        "exporters": [
+          "otlp/original",
+          "otlp/datadog",
+          "otlp/dynatrace"
+        ]
+      },
+      "logs": {
+        "receivers": [
+          "otlp/apps"
+        ],
+        "processors": [
+          "memory_limiter",
+          "batch"
+        ],
+        "exporters": [
+          "otlp/original"
+        ]
+      },
+      "metrics": {
+        "receivers": [
+          "otlp/apps"
+        ],
+        "processors": [
+          "memory_limiter",
+          "batch"
+        ],
+        "exporters": [
+          "otlp/original",
+          "otlp/dynatrace"
+        ]
+      },
+      "logs/captures": {
+        "receivers": [
+          "otlp/captures"
+        ],
+        "processors": [
+          "memory_limiter",
+          "batch"
+        ],
+        "exporters": [
+          "nop/captures",
+          "otlp/datadog",
+          "otlp/dynatrace"
+        ]
+      }
+    }
+  }
+}

@@ -1,13 +1,17 @@
-# Dynatrace partner telemetry
+# Partner telemetry routing
 
-The staging microsvc banking app sends application telemetry through `partner-trace-router` in `observability`. The router preserves the existing Jaeger, Loki, and Prometheus flows through the shared collector, while sending traces to the dedicated Datadog and Dynatrace partner collectors. Dynatrace continues receiving its existing DLP-filtered Speedscale capture logs.
+The staging microsvc banking app sends application telemetry through `partner-trace-router` in `observability`. The router preserves the existing Jaeger, Loki, and Prometheus flows through the shared collector, then independently fans out selected signals to vendor-specific Datadog, Dynatrace, and New Relic adapters. Speedscale sends DLP-filtered capture logs to the router's separate capture receiver.
 
-The credential stays in the destination namespace. Dynatrace reads `byoc-dynatrace/byoc-dynatrace` key `dataIngestToken`. Never use production monitoring credentials or add credentials to git.
+`destinations.json` is the vendor option array. Each entry declares the adapter service, supported signals, deployment, and credential location. `enabled` defines the initial state. Add another vendor by adding its adapter and one registry entry; do not add vendor credentials or account identifiers to git.
 
-The configured destination is `uim8926h.sprint.dynatracelabs.com`. Confirm it is the approved partner sandbox before passing `--partner-account-verified`.
+Use `manage.py` to change one live option without disturbing the others:
 
-The router and application endpoints are GitOps-owned by demo-infra. To turn partner trace export off, remove the router application and the endpoint patches from `argocd/microsvc.yaml`; Argo then returns application telemetry directly to the shared collector.
+```bash
+python3 manage.py status dynatrace --context do-nyc1-staging-decoy
+python3 manage.py off dynatrace --context do-nyc1-staging-decoy
+python3 manage.py on newrelic --context do-nyc1-staging-decoy --partner-account-verified
+```
 
-The router and Dynatrace collector use Kustomize-generated ConfigMaps. A collector configuration change produces a new ConfigMap name and rolls the Deployment so the running process cannot keep stale pipelines.
+Enabling checks that the vendor deployment is ready and its credential is non-empty. The router ConfigMap is the runtime switch state, and Argo ignores only its generated `otel.yaml` field so self-healing does not undo deliberate toggles. `render.py` produces the committed bootstrap configuration from the option array.
 
-The banking service allowlist accepts the Java SDK's absent namespace but rejects other named namespaces and unrelated services.
+Each vendor adapter owns its filtering, batching, authentication, naming, correlation, and error mapping. The routing array only decides which signals reach each adapter.

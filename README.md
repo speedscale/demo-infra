@@ -10,7 +10,7 @@ Cluster management, ArgoCD GitOps, and quality jobs for Speedscale demo clusters
 | staging-decoy | DigitalOcean | microsvc, microsvc-replay, speedscale-operator |
 | byoc-gcs-validation | GKE | microsvc, native capture, GCS archive, Datadog partner export |
 
-The [GKE partner demo](clusters/byoc-gcs-validation/microsvc/README.md) uses a pinned microsvc application base with deployment and collector configuration owned here. The [optional staging Datadog export](clusters/staging-decoy/datadog-partner/README.md) is a separate opt-in path. Neither is installed by the ArgoCD bootstrap workflow.
+The [GKE partner demo](clusters/byoc-gcs-validation/microsvc/README.md) uses a pinned microsvc application base with deployment and collector configuration owned here. Staging-decoy routes telemetry through [independently switchable vendor adapters](clusters/staging-decoy/partner-telemetry/README.md) for Datadog, Dynatrace, and New Relic.
 
 ## Quick Start
 

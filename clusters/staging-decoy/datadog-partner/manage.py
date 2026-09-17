@@ -9,7 +9,6 @@ import re
 from pathlib import Path
 import subprocess
 import urllib.request
-import yaml
 
 HERE = Path(__file__).resolve().parent
 NAME = "datadog-partner"
@@ -23,23 +22,6 @@ def kubectl(context, *args, data=None):
     ).decode()
 
 
-def fanout(config, enabled):
-    key = "otlp/datadog-partner"
-    if enabled:
-        config["exporters"][key] = {
-            "endpoint": "datadog-partner.observability.svc.cluster.local:4317",
-            "tls": {"insecure": True},
-        }
-    else:
-        config["exporters"].pop(key, None)
-    for signal in ("traces", "logs"):
-        exporters = config["service"]["pipelines"][signal]["exporters"]
-        exporters[:] = [item for item in exporters if item != key]
-        if enabled:
-            exporters.append(key)
-    return config
-
-
 def apply(context, objects):
     kubectl(
         context,
@@ -50,9 +32,18 @@ def apply(context, objects):
     )
 
 
+def route_enabled(context):
+    raw = kubectl(
+        context, "get", "configmap/partner-trace-router-config", "-o", "json"
+    )
+    config_map = json.loads(raw)
+    config = json.loads(config_map["data"]["otel.yaml"])
+    return "otlp/datadog" in config.get("exporters", {})
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["on", "off", "status", "install", "remove"])
+    parser.add_argument("action", choices=["install", "remove", "status"])
     parser.add_argument("--context", required=True)
     parser.add_argument(
         "--partner-account-verified",
@@ -67,19 +58,10 @@ def main():
     if args.context != "do-nyc1-staging-decoy":
         parser.error("This demo is scoped to do-nyc1-staging-decoy")
     if args.action == "status":
-        cm = json.loads(
-            kubectl(args.context, "get", "configmap/otel-collector-conf", "-o", "json")
-        )
-        config = yaml.safe_load(cm["data"]["otel-collector-config.yaml"])
-        key = "otlp/datadog-partner"
-        attached = all(
-            key in config["service"]["pipelines"][signal]["exporters"]
-            for signal in ("logs", "traces")
-        )
-        print("Partner fanout: " + ("on" if attached else "off"))
         print(kubectl(args.context, "get", "deployment/" + NAME, "--ignore-not-found"))
+        print("Datadog route: " + ("on" if route_enabled(args.context) else "off"))
         return
-    enabled = args.action in ("on", "install")
+    enabled = args.action == "install"
     if enabled:
         if not args.gcs_bucket or not args.gcs_project:
             parser.error("Explicit --gcs-bucket and --gcs-project are required")
@@ -269,18 +251,9 @@ def main():
         kubectl(
             args.context, "rollout", "status", "deployment/" + NAME, "--timeout=120s"
         )
-    cm = json.loads(
-        kubectl(args.context, "get", "configmap/otel-collector-conf", "-o", "json")
-    )
-    field = "otel-collector-config.yaml"
-    config = fanout(yaml.safe_load(cm["data"][field]), enabled)
-    cm["data"][field] = yaml.safe_dump(config, sort_keys=False)
-    kubectl(args.context, "replace", "-f", "-", data=cm)
-    kubectl(args.context, "rollout", "restart", "deployment/otel-collector")
-    kubectl(
-        args.context, "rollout", "status", "deployment/otel-collector", "--timeout=120s"
-    )
     if not enabled:
+        if route_enabled(args.context):
+            parser.error("Turn off the central Datadog route before removing its adapter")
         kubectl(
             args.context,
             "delete",
@@ -291,11 +264,7 @@ def main():
         kubectl(
             args.context, "delete", "configmap", NAME + "-storage", "--ignore-not-found"
         )
-    print(
-        "Partner export "
-        + ("enabled" if enabled else "removed")
-        + "; existing observability destinations preserved"
-    )
+    print("Datadog adapter " + ("installed" if enabled else "removed"))
 
 
 if __name__ == "__main__":

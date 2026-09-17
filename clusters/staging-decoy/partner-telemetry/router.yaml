@@ -22,6 +22,10 @@ spec:
           containerPort: 4317
         - name: http
           containerPort: 4318
+        - name: capture-grpc
+          containerPort: 5317
+        - name: capture-http
+          containerPort: 5318
         - name: health
           containerPort: 13133
         readinessProbe:
@@ -62,3 +66,9 @@ spec:
   - name: http
     port: 4318
     targetPort: http
+  - name: capture-grpc
+    port: 5317
+    targetPort: capture-grpc
+  - name: capture-http
+    port: 5318
+    targetPort: capture-http

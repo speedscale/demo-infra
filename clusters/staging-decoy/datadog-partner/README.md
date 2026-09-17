@@ -10,25 +10,29 @@ Python with PyYAML 6.0.3, kubectl access to staging-decoy, and explicit `DATADOG
 
 Provision a dedicated bucket-scoped GCS writer identity. Staging-decoy runs on DigitalOcean and cannot inherit GKE Workload Identity. The existing Kubernetes Secret `datadog-partner-gcs` in `observability` must contain `credentials.json` for that workload identity, plus any adjacent credential-source files it requires. Personal authorized-user ADC is rejected. External-account credentials need their own renewable subject-token source; merely copying a laptop credential file is insufficient. This manager does not create Google identities, IAM grants, or credentials. The writer needs the native GCS exporter's bucket metadata access and object-create permission. Use a separate reader for retrieval.
 
-## Toggle
+## Install and toggle
 
 ```bash
-python3 manage.py on --context do-nyc1-staging-decoy \
+python3 manage.py install --context do-nyc1-staging-decoy \
   --partner-account-verified --gcs-project <project> --gcs-bucket <bucket>
 python3 manage.py status --context do-nyc1-staging-decoy
+python3 ../partner-telemetry/manage.py on datadog \
+  --context do-nyc1-staging-decoy --partner-account-verified
+python3 ../partner-telemetry/manage.py off datadog \
+  --context do-nyc1-staging-decoy
 python3 verify.py
-python3 manage.py off --context do-nyc1-staging-decoy
+python3 manage.py remove --context do-nyc1-staging-decoy
 ```
 
-Use `--gcs-credentials-secret` for a differently named pre-provisioned writer secret and `--gcs-region` if needed. `install` and `remove` remain aliases for `on` and `off`. Status shows attachment and deployment state; readiness alone does not prove delivery, so run the Datadog verifier and retrieve a capture before presenting.
+Use `--gcs-credentials-secret` for a differently named pre-provisioned writer secret and `--gcs-region` if needed. This manager owns the Datadog-specific adapter lifecycle. The central partner router independently controls whether Datadog receives traffic. Readiness alone does not prove delivery, so run the Datadog verifier and retrieve a capture before presenting.
 
-On attaches an OTLP destination after the dedicated collector is ready. Off first detaches it, then removes only the partner collector and its ingestion-key Secret and storage ConfigMap. The GCS writer Secret, stored objects, banking app, simulator, and existing observability destinations are retained. Both operations restart the shared collector, causing a brief ingestion interruption. Resource-version checks reject concurrent ConfigMap changes. Reapplying the base observability manifest removes this optional live attachment; rerun on after a base redeployment if the demo is needed. This is an operator-invoked deployment toggle, not a persistent Argo values flag.
+Install creates the vendor-specific collector, ingestion Secret, and storage configuration. Remove deletes those resources while retaining the GCS writer Secret, stored objects, banking app, simulator, and unrelated observability destinations. Turn the central Datadog option off before removing the adapter.
 
 ## Data and validation
 
 Only traced banking-app HTTP records with safe service names are archived. Authentication routes are excluded. GCS retains full captured payloads and headers; Datadog receives a GCS link, native trace context, service name, and `deployment.cluster:staging-decoy`. Incoming captures correlate at trace level; outgoing captures retain the client span ID. Raw payloads and credentials must not be copied into git or shown in the shared terminal.
 
-Run `python3 test_collector.py` to exercise the pinned collector locally and `python3 -m unittest -v test_manage.py` for fanout preservation. Before calling the migration complete, enable on staging, verify a new staging-tagged APM/log pair, retrieve its GCS payload, run the BYOC replay demo, disable and verify the export stops while Jaeger/Loki remain attached, then re-enable and verify a new trace. Staging acceptance completed on 2026-09-15: correlated gateway spans and capture links, GCS retrieval, and local replay with HTTP 200 / injected 503 / recovered 200. Off removed the partner deployment and fanout while retaining the simulator and existing pipelines; export was then re-enabled.
+Run `python3 test_collector.py` to exercise the pinned collector locally. Before calling the migration complete, enable on staging, verify a new staging-tagged APM/log pair, retrieve its GCS payload, run the BYOC replay demo, disable and verify the export stops while Jaeger/Loki remain attached, then re-enable and verify a new trace. Staging acceptance completed on 2026-09-15: correlated gateway spans and capture links, GCS retrieval, and local replay with HTTP 200 / injected 503 / recovered 200.
 
 The temporary GKE validation cluster was deleted after validation. Its kubeconfig and Workload Identity are not staging deployment dependencies. Never delete the archive bucket as part of turning this demo off.
 

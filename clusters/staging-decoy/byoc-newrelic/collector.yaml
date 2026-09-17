@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: otel-collector
-  namespace: byoc-dynatrace
+  namespace: byoc-newrelic
   labels:
     app: otel-collector
 spec:
@@ -22,37 +22,36 @@ spec:
           image: otel/opentelemetry-collector-contrib:0.160.0@sha256:799dc6cf12c96192af37b5bdba804da8c10b3bc563b43cb90c3f3c58d9572ad6
           args: ["--config=/etc/otel/otel.yaml"]
           env:
-            - name: DT_OTLP_ENDPOINT
+            - name: NEW_RELIC_PARTNER_LICENSE_KEY
               valueFrom:
                 secretKeyRef:
-                  name: byoc-dynatrace
-                  key: otlpEndpoint
-            - name: DT_INGEST_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: byoc-dynatrace
-                  key: dataIngestToken
+                  name: byoc-newrelic
+                  key: licenseKey
           ports:
-            - containerPort: 4317
-            - containerPort: 4318
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+            - name: health
+              containerPort: 13133
           volumeMounts:
             - name: config
               mountPath: /etc/otel
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
+              memory: 256Mi
             limits:
               cpu: 500m
               memory: 512Mi
           livenessProbe:
             httpGet:
               path: /
-              port: 13133
+              port: health
           readinessProbe:
             httpGet:
               path: /
-              port: 13133
+              port: health
       volumes:
         - name: config
           configMap:
@@ -62,14 +61,14 @@ apiVersion: v1
 kind: Service
 metadata:
   name: otel-collector
-  namespace: byoc-dynatrace
+  namespace: byoc-newrelic
 spec:
   selector:
     app: otel-collector
   ports:
     - name: otlp-grpc
       port: 4317
-      targetPort: 4317
+      targetPort: otlp-grpc
     - name: otlp-http
       port: 4318
-      targetPort: 4318
+      targetPort: otlp-http
