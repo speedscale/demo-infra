@@ -8,4 +8,6 @@ The configured destination is `uim8926h.sprint.dynatracelabs.com`. Confirm it is
 
 The router and application endpoints are GitOps-owned by demo-infra. To turn partner trace export off, remove the router application and the endpoint patches from `argocd/microsvc.yaml`; Argo then returns application telemetry directly to the shared collector.
 
+The router and Dynatrace collector use Kustomize-generated ConfigMaps. A collector configuration change produces a new ConfigMap name and rolls the Deployment so the running process cannot keep stale pipelines.
+
 The banking service allowlist accepts the Java SDK's absent namespace but rejects other named namespaces and unrelated services.
