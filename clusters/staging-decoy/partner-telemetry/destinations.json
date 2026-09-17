@@ -1,0 +1,32 @@
+[
+  {
+    "name": "datadog",
+    "enabled": true,
+    "endpoint": "datadog-partner.observability.svc.cluster.local:4317",
+    "signals": ["traces", "captures"],
+    "namespace": "observability",
+    "deployment": "datadog-partner",
+    "secret": "datadog-partner",
+    "secretKey": "api-key"
+  },
+  {
+    "name": "dynatrace",
+    "enabled": true,
+    "endpoint": "otel-collector.byoc-dynatrace.svc.cluster.local:4317",
+    "signals": ["traces", "metrics", "captures"],
+    "namespace": "byoc-dynatrace",
+    "deployment": "otel-collector",
+    "secret": "byoc-dynatrace",
+    "secretKey": "dataIngestToken"
+  },
+  {
+    "name": "newrelic",
+    "enabled": false,
+    "endpoint": "otel-collector.byoc-newrelic.svc.cluster.local:4317",
+    "signals": ["traces", "metrics", "captures"],
+    "namespace": "byoc-newrelic",
+    "deployment": "otel-collector",
+    "secret": "byoc-newrelic",
+    "secretKey": "licenseKey"
+  }
+]

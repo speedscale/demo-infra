@@ -14,9 +14,17 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
+  ignoreDifferences:
+  - group: ""
+    kind: ConfigMap
+    name: partner-trace-router-config
+    namespace: observability
+    jsonPointers:
+    - /data/otel.yaml
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - RespectIgnoreDifferences=true
