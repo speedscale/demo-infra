@@ -20,6 +20,8 @@ class RouterTests(unittest.TestCase):
         self.assertFalse(manage.configured(config, self.by_name["newrelic"]))
         self.assertNotIn("otlp/datadog", config["service"]["pipelines"]["metrics"]["exporters"])
         self.assertIn("otlp/dynatrace", config["service"]["pipelines"]["metrics"]["exporters"])
+        self.assertNotIn("otlp/original", config["service"]["pipelines"]["metrics"]["exporters"])
+        self.assertIn("nop/metrics", config["service"]["pipelines"]["metrics"]["exporters"])
 
     def test_toggle_preserves_other_vendors_and_signal_choices(self):
         config = render.build_config(self.destinations)

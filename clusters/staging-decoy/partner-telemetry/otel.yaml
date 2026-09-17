@@ -39,6 +39,7 @@
         "insecure": true
       }
     },
+    "nop/metrics": {},
     "nop/captures": {},
     "otlp/datadog": {
       "endpoint": "datadog-partner.observability.svc.cluster.local:4317",
@@ -98,7 +99,7 @@
           "batch"
         ],
         "exporters": [
-          "otlp/original",
+          "nop/metrics",
           "otlp/dynatrace"
         ]
       },
