@@ -59,23 +59,30 @@ processors:
     log_statements:
       - context: log
         statements:
-          - set(resource.attributes["service.name"], log.body["service"])
-          - set(resource.attributes["service.name"], "transactions-service") where log.body["service"] == "banking-transactions"
-          - set(resource.attributes["service.name"], "accounts-service") where log.body["service"] == "banking-accounts"
-          - set(resource.attributes["service.name"], "user-service") where log.body["service"] == "banking-user"
-          - set(resource.attributes["service.name"], "api-gateway") where log.body["service"] == "banking-gateway"
-          - set(resource.attributes["service.name"], "frontend") where log.body["service"] == "banking-frontend"
-          - set(resource.attributes["service.name"], "fraud-service") where log.body["service"] == "banking-fraud"
-          - set(resource.attributes["service.name"], "notification-service") where log.body["service"] == "banking-notification"
-          - set(resource.attributes["service.name"], "ai-service") where log.body["service"] == "banking-ai"
+          - set(log.attributes["service.name"], log.body["service"])
+          - set(log.attributes["service.name"], "transactions-service") where log.body["service"] == "banking-transactions"
+          - set(log.attributes["service.name"], "accounts-service") where log.body["service"] == "banking-accounts"
+          - set(log.attributes["service.name"], "user-service") where log.body["service"] == "banking-user"
+          - set(log.attributes["service.name"], "api-gateway") where log.body["service"] == "banking-gateway"
+          - set(log.attributes["service.name"], "frontend") where log.body["service"] == "banking-frontend"
+          - set(log.attributes["service.name"], "fraud-service") where log.body["service"] == "banking-fraud"
+          - set(log.attributes["service.name"], "notification-service") where log.body["service"] == "banking-notification"
+          - set(log.attributes["service.name"], "ai-service") where log.body["service"] == "banking-ai"
           - set(log.attributes["speedscale.workload"], log.body["service"])
           - set(log.attributes["speedscale.direction"], log.body["direction"])
+          - set(log.attributes["http.request.method"], log.body["http"]["req"]["method"])
+          - set(log.attributes["url.path"], log.body["http"]["req"]["uri"])
+          - set(log.attributes["http.response.status_code"], log.body["http"]["res"]["statusCode"])
           - set(log.cache["parent"], log.body["http"]["req"]["headers"]["Traceparent"][0]) where log.body["http"]["req"]["headers"]["Traceparent"] != nil
           - set(log.cache["parent"], log.body["http"]["req"]["headers"]["traceparent"][0]) where log.body["http"]["req"]["headers"]["traceparent"] != nil
           - set(log.cache["context"], ExtractPatterns(log.cache["parent"], "^00-(?P<trace>[0-9a-f]{32})-(?P<span>[0-9a-f]{16})-[0-9a-f]{2}$")) where log.cache["parent"] != nil
           - set(log.trace_id, TraceID(log.cache["context"]["trace"])) where log.cache["context"]["trace"] != nil
           - set(log.span_id, SpanID(log.cache["context"]["span"])) where log.cache["context"]["span"] != nil and log.body["direction"] == "OUT"
           - set(log.span_id, SpanID(0x0000000000000000)) where log.body["direction"] == "IN"
+          - set(log.body, Concat([log.body["direction"], log.body["http"]["req"]["method"], log.body["http"]["req"]["uri"]], " "))
+  groupbyattrs/service:
+    keys:
+      - service.name
   filter/traced:
     error_mode: propagate
     logs:
@@ -88,6 +95,37 @@ processors:
     timeout: 1s
     send_batch_size: 100
     send_batch_max_size: 200
+  metricstransform/newrelic_apm:
+    transforms:
+      - include: traces.span.metrics.duration
+        action: update
+        new_name: http.server.duration
+  filter/newrelic_apm:
+    error_mode: propagate
+    metrics:
+      metric:
+        - name != "http.server.duration"
+      datapoint:
+        - attributes["span.kind"] != "SPAN_KIND_SERVER" and attributes["span.kind"] != "SERVER"
+        - attributes["http.method"] == nil
+        - attributes["http.route"] == nil
+
+connectors:
+  span_metrics/newrelic:
+    histogram:
+      unit: ms
+    dimensions:
+      - name: http.method
+      - name: http.route
+      - name: http.status_code
+    exclude_dimensions:
+      - collector.instance.id
+    metrics_flush_interval: 10s
+    metrics_expiration: 5m
+    resource_metrics_key_attributes:
+      - service.name
+      - service.namespace
+      - deployment.environment.name
 
 exporters:
   otlphttp/newrelic:
@@ -111,12 +149,16 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, filter/banking, resource/partner, transform/errors, batch]
-      exporters: [otlphttp/newrelic]
+      exporters: [otlphttp/newrelic, span_metrics/newrelic]
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, filter/banking, transform/capture, filter/traced, resource/partner, batch]
+      processors: [memory_limiter, filter/banking, transform/capture, groupbyattrs/service, filter/traced, resource/partner, batch]
       exporters: [otlphttp/newrelic]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, filter/banking, resource/partner, batch]
+      exporters: [otlphttp/newrelic]
+    metrics/newrelic_apm:
+      receivers: [span_metrics/newrelic]
+      processors: [metricstransform/newrelic_apm, filter/newrelic_apm, batch]
       exporters: [otlphttp/newrelic]
