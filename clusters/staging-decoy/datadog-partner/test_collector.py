@@ -44,6 +44,7 @@ b = {
     "direction": "OUT",
     "http": {
         "req": {
+            "method": "POST",
             "uri": "/api/transactions/deposit",
             "headers": {
                 "Traceparent": [
@@ -176,6 +177,9 @@ assert (
     "https://console.cloud.google.com/storage/browser/test-partner-bucket/byoc/transactions-service/11111111111111111111111111111111"
     in s
 )
+assert "OUT POST /api/transactions/deposit" in s
+for required in ("hostname", "msgType", "speedscale.workload", "speedscale.direction", "speedscale.capture_url"):
+    assert required in s, f"Datadog output is missing {required}"
 archive = (p / "gcs.json").read_text()
 assert (
     "secret-marker" in archive
@@ -203,7 +207,7 @@ assert all(
     for r in rows
 )
 print(
-    "PASS: namespace and authentication filters, full GCS captures, link-only Datadog logs, service mapping, outbound span and inbound trace correlation"
+    "PASS: namespace and authentication filters, full GCS captures, readable Datadog logs with archive links, service mapping, outbound span and inbound trace correlation"
 )
 
 spans = [span for line in s.splitlines()
