@@ -62,6 +62,7 @@ def build_config(destinations):
                 "endpoint": "otel-collector.observability.svc.cluster.local:4317",
                 "tls": {"insecure": True},
             },
+            "nop/metrics": {},
             "nop/captures": {},
         },
         "extensions": {"health_check": {"endpoint": "0.0.0.0:13133"}},
@@ -81,7 +82,7 @@ def build_config(destinations):
                 "metrics": {
                     "receivers": ["otlp/apps"],
                     "processors": ["memory_limiter", "batch"],
-                    "exporters": ["otlp/original"],
+                    "exporters": ["nop/metrics"],
                 },
                 "logs/captures": {
                     "receivers": ["otlp/captures"],
