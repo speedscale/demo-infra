@@ -52,17 +52,22 @@ processors:
     - context: log
       statements:
       - set(log.attributes["deployment.cluster"], "staging-decoy")
-      - set(resource.attributes["service.name"], log.body["service"])
-      - set(resource.attributes["service.name"], "transactions-service") where log.body["service"] == "banking-transactions"
-      - set(resource.attributes["service.name"], "accounts-service") where log.body["service"] == "banking-accounts"
-      - set(resource.attributes["service.name"], "user-service") where log.body["service"] == "banking-user"
-      - set(resource.attributes["service.name"], "api-gateway") where log.body["service"] == "banking-gateway"
-      - set(resource.attributes["service.name"], "frontend") where log.body["service"] == "banking-frontend"
-      - set(resource.attributes["service.name"], "fraud-service") where log.body["service"] == "banking-fraud"
-      - set(resource.attributes["service.name"], "notification-service") where log.body["service"] == "banking-notification"
-      - set(resource.attributes["service.name"], "ai-service") where log.body["service"] == "banking-ai"
+      - set(log.attributes["service.name"], log.body["service"])
+      - set(log.attributes["service.name"], "transactions-service") where log.body["service"] == "banking-transactions"
+      - set(log.attributes["service.name"], "accounts-service") where log.body["service"] == "banking-accounts"
+      - set(log.attributes["service.name"], "user-service") where log.body["service"] == "banking-user"
+      - set(log.attributes["service.name"], "api-gateway") where log.body["service"] == "banking-gateway"
+      - set(log.attributes["service.name"], "frontend") where log.body["service"] == "banking-frontend"
+      - set(log.attributes["service.name"], "fraud-service") where log.body["service"] == "banking-fraud"
+      - set(log.attributes["service.name"], "notification-service") where log.body["service"] == "banking-notification"
+      - set(log.attributes["service.name"], "ai-service") where log.body["service"] == "banking-ai"
+      - set(log.attributes["hostname"], log.attributes["service.name"])
+      - set(log.attributes["msgType"], log.body["msgType"])
       - set(log.attributes["speedscale.workload"], log.body["service"])
       - set(log.attributes["speedscale.direction"], log.body["direction"])
+      - set(log.attributes["http.request.method"], log.body["http"]["req"]["method"])
+      - set(log.attributes["url.path"], log.body["http"]["req"]["uri"])
+      - set(log.attributes["http.response.status_code"], log.body["http"]["res"]["statusCode"])
       - set(log.cache["parent"], log.body["http"]["req"]["headers"]["Traceparent"][0]) where log.body["http"]["req"]["headers"]["Traceparent"] != nil
       - set(log.cache["parent"], log.body["http"]["req"]["headers"]["traceparent"][0]) where log.body["http"]["req"]["headers"]["traceparent"] != nil
       - set(log.cache["context"], ExtractPatterns(log.cache["parent"], "^00-(?P<trace>[0-9a-f]{32})-(?P<span>[0-9a-f]{16})-[0-9a-f]{2}$")) where log.cache["parent"]
@@ -78,15 +83,14 @@ processors:
     logs:
       log_record:
       - log.trace_id == TraceID(0x00000000000000000000000000000000)
-      - resource.attributes["service.name"] == nil
-      - resource.attributes["service.name"] == ""
-      - not IsMatch(resource.attributes["service.name"], "^[A-Za-z0-9][A-Za-z0-9._-]*$")
+      - log.attributes["service.name"] == nil
+      - log.attributes["service.name"] == ""
+      - not IsMatch(log.attributes["service.name"], "^[A-Za-z0-9][A-Za-z0-9._-]*$")
   transform/routing:
     error_mode: propagate
     log_statements:
     - context: log
       statements:
-      - set(log.attributes["service.name"], resource.attributes["service.name"])
       - set(log.attributes["trace_id"], log.trace_id.string)
   groupbyattrs:
     keys:
@@ -107,8 +111,9 @@ processors:
     log_statements:
     - context: log
       statements:
-      - set(log.body, Concat(["https://console.cloud.google.com/storage/browser/", "${env:DATADOG_PARTNER_GCS_BUCKET}", "/byoc/", resource.attributes["gcs.prefix"]],
+      - set(log.attributes["speedscale.capture_url"], Concat(["https://console.cloud.google.com/storage/browser/", "${env:DATADOG_PARTNER_GCS_BUCKET}", "/byoc/", resource.attributes["gcs.prefix"]],
         ""))
+      - set(log.body, Concat([log.attributes["speedscale.direction"], log.attributes["http.request.method"], log.attributes["url.path"]], " "))
   batch/datadog:
     timeout: 1s
     send_batch_size: 100

@@ -68,6 +68,7 @@ processors:
           - set(log.attributes["service.name"], "fraud-service") where log.body["service"] == "banking-fraud"
           - set(log.attributes["service.name"], "notification-service") where log.body["service"] == "banking-notification"
           - set(log.attributes["service.name"], "ai-service") where log.body["service"] == "banking-ai"
+          - set(log.attributes["hostname"], log.attributes["service.name"])
           - set(log.attributes["speedscale.workload"], log.body["service"])
           - set(log.attributes["speedscale.direction"], log.body["direction"])
           - set(log.attributes["http.request.method"], log.body["http"]["req"]["method"])
