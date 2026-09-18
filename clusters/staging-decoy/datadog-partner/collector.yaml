@@ -20,8 +20,7 @@ processors:
       log_record:
       - log.body["namespace"] != "banking-app"
       - log.body["msgType"] != "rrpair"
-      - not IsMatch(log.body["l7protocol"], "^https?$")
-      - IsMatch(log.body["http"]["req"]["uri"], "(?i)/api/users/(login|register|refresh|reset|password)")
+      - log.body["http"] != nil and log.body["http"]["req"]["uri"] != nil and IsMatch(log.body["http"]["req"]["uri"], "(?i)/api/users/(login|register|refresh|reset|password)")
   resource/partner:
     attributes:
     - key: deployment.environment
@@ -65,11 +64,15 @@ processors:
       - set(log.attributes["msgType"], log.body["msgType"])
       - set(log.attributes["speedscale.workload"], log.body["service"])
       - set(log.attributes["speedscale.direction"], log.body["direction"])
-      - set(log.attributes["http.request.method"], log.body["http"]["req"]["method"])
-      - set(log.attributes["url.path"], log.body["http"]["req"]["uri"])
-      - set(log.attributes["http.response.status_code"], log.body["http"]["res"]["statusCode"])
-      - set(log.cache["parent"], log.body["http"]["req"]["headers"]["Traceparent"][0]) where log.body["http"]["req"]["headers"]["Traceparent"] != nil
-      - set(log.cache["parent"], log.body["http"]["req"]["headers"]["traceparent"][0]) where log.body["http"]["req"]["headers"]["traceparent"] != nil
+      - set(log.attributes["speedscale.protocol"], log.body["l7protocol"])
+      - set(log.attributes["speedscale.command"], log.body["command"])
+      - set(log.attributes["speedscale.status"], log.body["status"])
+      - set(log.attributes["network.peer.address"], log.body["network_address"])
+      - set(log.attributes["http.request.method"], log.body["http"]["req"]["method"]) where log.body["http"] != nil
+      - set(log.attributes["url.path"], log.body["http"]["req"]["uri"]) where log.body["http"] != nil
+      - set(log.attributes["http.response.status_code"], log.body["http"]["res"]["statusCode"]) where log.body["http"] != nil
+      - set(log.cache["parent"], log.body["http"]["req"]["headers"]["Traceparent"][0]) where log.body["http"] != nil and log.body["http"]["req"]["headers"]["Traceparent"] != nil
+      - set(log.cache["parent"], log.body["http"]["req"]["headers"]["traceparent"][0]) where log.body["http"] != nil and log.body["http"]["req"]["headers"]["traceparent"] != nil
       - set(log.cache["context"], ExtractPatterns(log.cache["parent"], "^00-(?P<trace>[0-9a-f]{32})-(?P<span>[0-9a-f]{16})-[0-9a-f]{2}$")) where log.cache["parent"]
         != nil
       - set(log.trace_id, TraceID(log.cache["context"]["trace"])) where log.cache["context"]["trace"] != nil
@@ -78,11 +81,10 @@ processors:
   batch:
     timeout: 1s
     send_batch_size: 100
-  filter/traced:
+  filter/valid-service:
     error_mode: propagate
     logs:
       log_record:
-      - log.trace_id == TraceID(0x00000000000000000000000000000000)
       - log.attributes["service.name"] == nil
       - log.attributes["service.name"] == ""
       - not IsMatch(log.attributes["service.name"], "^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -91,17 +93,19 @@ processors:
     log_statements:
     - context: log
       statements:
-      - set(log.attributes["trace_id"], log.trace_id.string)
+      - set(log.attributes["capture_id"], log.body["uuid"])
+      - replace_pattern(log.attributes["capture_id"], "[^A-Za-z0-9._-]", "_")
+      - set(log.attributes["capture_id"], log.trace_id.string) where log.trace_id != TraceID(0x00000000000000000000000000000000)
   groupbyattrs:
     keys:
     - service.name
-    - trace_id
+    - capture_id
   transform/prefix:
     error_mode: propagate
     log_statements:
     - context: resource
       statements:
-      - set(resource.attributes["gcs.prefix"], Concat([resource.attributes["service.name"], resource.attributes["trace_id"]], "/"))
+      - set(resource.attributes["gcs.prefix"], Concat([resource.attributes["service.name"], resource.attributes["capture_id"]], "/"))
   batch/gcs:
     send_batch_size: 1
     send_batch_max_size: 1
@@ -113,7 +117,9 @@ processors:
       statements:
       - set(log.attributes["speedscale.capture_url"], Concat(["https://console.cloud.google.com/storage/browser/", "${env:DATADOG_PARTNER_GCS_BUCKET}", "/byoc/", resource.attributes["gcs.prefix"]],
         ""))
-      - set(log.body, Concat([log.attributes["speedscale.direction"], log.attributes["http.request.method"], log.attributes["url.path"]], " "))
+      - set(log.body, Concat([log.attributes["speedscale.direction"], log.attributes["speedscale.protocol"]], " "))
+      - set(log.body, Concat([log.attributes["speedscale.direction"], log.attributes["speedscale.protocol"], log.attributes["speedscale.command"]], " ")) where log.attributes["speedscale.command"] != nil
+      - set(log.body, Concat([log.attributes["speedscale.direction"], log.attributes["http.request.method"], log.attributes["url.path"]], " ")) where log.attributes["http.request.method"] != nil
   batch/datadog:
     timeout: 1s
     send_batch_size: 100
@@ -178,7 +184,7 @@ service:
       - memory_limiter
       - filter/banking
       - transform/capture
-      - filter/traced
+      - filter/valid-service
       - resource/partner
       - transform/routing
       - groupbyattrs
@@ -193,7 +199,7 @@ service:
       - memory_limiter
       - filter/banking
       - transform/capture
-      - filter/traced
+      - filter/valid-service
       - resource/partner
       - transform/routing
       - groupbyattrs
