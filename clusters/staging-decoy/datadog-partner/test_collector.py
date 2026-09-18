@@ -45,7 +45,7 @@ b = {
     "direction": "OUT",
     "command": "POST",
     "status": "200",
-    "network_address": "transactions-service:8080",
+    "netinfo": {"upstream": {"hostname": "transactions-service", "port": 8080}},
     "http": {
         "req": {
             "method": "POST",
@@ -94,7 +94,7 @@ postgres = {
     "uuid": "postgres/capture==",
     "command": "Execute Prepared Statement",
     "status": "OK",
-    "network_address": "postgres:5432",
+    "netinfo": {"upstream": {"hostname": "banking-postgres.banking-app.svc.cluster.local", "port": 5432}},
     "postgres": {"request": {"execute": {}}, "response": {"execute": {}}},
 }
 logs.append(
@@ -104,6 +104,30 @@ logs.append(
             {
                 "logRecords": [
                     {"timeUnixNano": str(time.time_ns()), "body": value(postgres)}
+                ]
+            }
+        ],
+    }
+)
+kafka = {
+    "namespace": "banking-app",
+    "msgType": "rrpair",
+    "l7protocol": "kafka",
+    "service": "banking-notification",
+    "direction": "OUT",
+    "uuid": "kafka/capture==",
+    "command": "Fetch",
+    "status": "OK",
+    "netinfo": {"upstream": {"hostname": "banking-kafka.banking-app.svc.cluster.local", "port": 9092}},
+    "kafka": {"request": {}, "response": {}},
+}
+logs.append(
+    {
+        "resource": {},
+        "scopeLogs": [
+            {
+                "logRecords": [
+                    {"timeUnixNano": str(time.time_ns()), "body": value(kafka)}
                 ]
             }
         ],
@@ -208,7 +232,10 @@ assert (
 )
 assert "OUT POST /api/transactions/deposit" in s
 assert "OUT postgres Execute Prepared Statement" in s
-for required in ("hostname", "msgType", "speedscale.workload", "speedscale.direction", "speedscale.protocol", "speedscale.command", "speedscale.status", "speedscale.capture_url"):
+assert "OUT kafka Fetch" in s
+for destination in ("transactions-service", "banking-postgres.banking-app.svc.cluster.local", "banking-kafka.banking-app.svc.cluster.local"):
+    assert destination in s, f"Datadog output is missing destination {destination}"
+for required in ("hostname", "server.address", "network.peer.address", "msgType", "speedscale.workload", "speedscale.direction", "speedscale.protocol", "speedscale.command", "speedscale.status", "speedscale.capture_url"):
     assert required in s, f"Datadog output is missing {required}"
 archive = (p / "gcs.json").read_text()
 assert (
@@ -221,20 +248,20 @@ assert (
         for r in json.loads(line).get("resourceLogs", [])
         for scope in r["scopeLogs"]
     )
-    == 3
+        == 4
 )
 rows = [r for line in s.splitlines() for r in json.loads(line).get("resourceLogs", [])]
 records = [l for r in rows for scope in r["scopeLogs"] for l in scope["logRecords"]]
-assert len(records) == 3, len(records)
+assert len(records) == 4, len(records)
 assert sum(x.get("traceId") == "11111111111111111111111111111111" for x in records) == 2
-assert sum(not x.get("traceId") for x in records) == 1
+assert sum(not x.get("traceId") for x in records) == 2
 assert sum(x.get("spanId") == "2222222222222222" for x in records) == 1
 assert {
     a["value"]["stringValue"]
     for r in rows
     for a in r["resource"]["attributes"]
     if a["key"] == "service.name"
-} == {"transactions-service", "accounts-service"}
+} == {"transactions-service", "accounts-service", "notification-service"}
 assert any(
     any(
         a["key"] == "service.name"
