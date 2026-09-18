@@ -40,8 +40,12 @@ b = {
     "namespace": "banking-app",
     "msgType": "rrpair",
     "l7protocol": "http",
+    "uuid": "http-capture",
     "service": "banking-transactions",
     "direction": "OUT",
+    "command": "POST",
+    "status": "200",
+    "network_address": "transactions-service:8080",
     "http": {
         "req": {
             "method": "POST",
@@ -81,6 +85,30 @@ for ns, route, direction, protocol in [
             ],
         }
     )
+postgres = {
+    "namespace": "banking-app",
+    "msgType": "rrpair",
+    "l7protocol": "postgres",
+    "service": "banking-accounts",
+    "direction": "OUT",
+    "uuid": "postgres/capture==",
+    "command": "Execute Prepared Statement",
+    "status": "OK",
+    "network_address": "postgres:5432",
+    "postgres": {"request": {"execute": {}}, "response": {"execute": {}}},
+}
+logs.append(
+    {
+        "resource": {},
+        "scopeLogs": [
+            {
+                "logRecords": [
+                    {"timeUnixNano": str(time.time_ns()), "body": value(postgres)}
+                ]
+            }
+        ],
+    }
+)
 image = "otel/opentelemetry-collector-contrib:0.160.0@sha256:799dc6cf12c96192af37b5bdba804da8c10b3bc563b43cb90c3f3c58d9572ad6"
 cid = (
     subprocess.check_output(
@@ -179,7 +207,8 @@ assert (
     in s
 )
 assert "OUT POST /api/transactions/deposit" in s
-for required in ("hostname", "msgType", "speedscale.workload", "speedscale.direction", "speedscale.capture_url"):
+assert "OUT postgres Execute Prepared Statement" in s
+for required in ("hostname", "msgType", "speedscale.workload", "speedscale.direction", "speedscale.protocol", "speedscale.command", "speedscale.status", "speedscale.capture_url"):
     assert required in s, f"Datadog output is missing {required}"
 archive = (p / "gcs.json").read_text()
 assert (
@@ -192,23 +221,30 @@ assert (
         for r in json.loads(line).get("resourceLogs", [])
         for scope in r["scopeLogs"]
     )
-    == 2
+    == 3
 )
 rows = [r for line in s.splitlines() for r in json.loads(line).get("resourceLogs", [])]
 records = [l for r in rows for scope in r["scopeLogs"] for l in scope["logRecords"]]
-assert len(records) == 2, len(records)
-assert all(x["traceId"] == "11111111111111111111111111111111" for x in records)
+assert len(records) == 3, len(records)
+assert sum(x.get("traceId") == "11111111111111111111111111111111" for x in records) == 2
+assert sum(not x.get("traceId") for x in records) == 1
 assert sum(x.get("spanId") == "2222222222222222" for x in records) == 1
-assert all(
+assert {
+    a["value"]["stringValue"]
+    for r in rows
+    for a in r["resource"]["attributes"]
+    if a["key"] == "service.name"
+} == {"transactions-service", "accounts-service"}
+assert any(
     any(
         a["key"] == "service.name"
-        and a["value"]["stringValue"] == "transactions-service"
+        and a["value"]["stringValue"] == "accounts-service"
         for a in r["resource"]["attributes"]
     )
     for r in rows
 )
 print(
-    "PASS: namespace and authentication filters, full GCS captures, readable Datadog logs with archive links, service mapping, outbound span and inbound trace correlation"
+    "PASS: all-protocol capture export, namespace and authentication filters, full GCS captures, readable Datadog logs with archive links, service mapping, and optional trace correlation"
 )
 
 spans = [span for line in s.splitlines()
