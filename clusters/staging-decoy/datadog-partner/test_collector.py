@@ -58,16 +58,17 @@ b = {
     },
 }
 logs = []
-for ns, route, direction in [
-    ("banking-app", "/api/transactions/deposit", "OUT"),
-    ("banking-app", "/api/transactions/deposit", "IN"),
-    ("production", "/api/transactions/deposit", "OUT"),
-    ("banking-app", "/api/users/login", "OUT"),
+for ns, route, direction, protocol in [
+    ("banking-app", "/api/transactions/deposit", "OUT", "https"),
+    ("banking-app", "/api/transactions/deposit", "IN", "http"),
+    ("production", "/api/transactions/deposit", "OUT", "https"),
+    ("banking-app", "/api/users/login", "OUT", "https"),
 ]:
     x = copy.deepcopy(b)
     x["namespace"] = ns
     x["http"]["req"]["uri"] = route
     x["direction"] = direction
+    x["l7protocol"] = protocol
     logs.append(
         {
             "resource": {},

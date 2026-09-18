@@ -21,7 +21,7 @@ processors:
       log_record:
         - log.body["namespace"] != "banking-app"
         - log.body["msgType"] != "rrpair"
-        - log.body["l7protocol"] != "http"
+        - not IsMatch(log.body["l7protocol"], "^https?$")
         - IsMatch(log.body["http"]["req"]["uri"], "(?i)/api/users/(login|register|refresh|reset|password)")
     metrics:
       metric:
