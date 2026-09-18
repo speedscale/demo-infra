@@ -21,7 +21,7 @@
   },
   {
     "name": "newrelic",
-    "enabled": false,
+    "enabled": true,
     "endpoint": "otel-collector.byoc-newrelic.svc.cluster.local:4317",
     "signals": ["traces", "metrics", "captures"],
     "namespace": "byoc-newrelic",
