@@ -27,6 +27,7 @@ class ReportingTest(unittest.TestCase):
             setup = r'''
 set -euo pipefail
 name=banking-fraud
+load_args=()
 SPEEDCTL_HOME="$TEST_ROOT"
 snapshot_dir="$TEST_ROOT/snapshot"
 result_dir="$TEST_ROOT/results"
