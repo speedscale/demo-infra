@@ -216,3 +216,52 @@ jobs:
         mkdir -p "$SPEEDCTL_HOME"
         cp "$HOME/.speedscale/config.yaml" "$SPEEDCTL_HOME/config.yaml"
         ./quality/scripts/run-replay.sh staging-decoy
+
+  load-scenarios:
+    name: Load scenarios (${{ matrix.cluster }})
+    runs-on: ubuntu-latest
+    # The load and CD replays target the same services.
+    needs: [validate-scheduled-run, cd-replay-dev, cd-replay-staging]
+    if: >-
+      !cancelled() &&
+      needs.validate-scheduled-run.outputs.should-run == 'true'
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        cluster: [dev-decoy, staging-decoy]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+    - name: Install proxymock
+      run: |
+        curl -fsSL https://downloads.speedscale.com/proxymock/install-proxymock | sh
+        echo "$HOME/.speedscale" >> "$GITHUB_PATH"
+
+    - name: Configure load replay
+      env:
+        SPEEDCTL_CONFIG_DATA: ${{ matrix.cluster == 'dev-decoy' && secrets.SPEEDCTL_DEV_CONFIG || secrets.SPEEDCTL_STAGING_CONFIG }}
+      run: |
+        mkdir -p "$RUNNER_TEMP/speedctl"
+        printf '%s\n' "$SPEEDCTL_CONFIG_DATA" > "$RUNNER_TEMP/speedctl/config.yaml"
+
+    - name: Run load scenarios
+      if: github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == matrix.cluster
+      env:
+        SPEEDCTL_HOME: ${{ runner.temp }}/speedctl
+        SPEEDSCALE_HOME: ${{ runner.temp }}/speedctl
+      run: ./quality/scripts/run-daily-load.sh ${{ matrix.cluster }}
+
+    - name: Upload load reports
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: load-${{ matrix.cluster }}
+        path: quality/proxymock-reports/${{ matrix.cluster }}/load/
+        if-no-files-found: ignore

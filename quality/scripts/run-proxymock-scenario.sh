@@ -6,11 +6,15 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 CLUSTER_NAME=${1:-}
 REPLAY_NAME=${2:-}
+LOAD_PROFILE=${3:-regression}
 
 if [ -z "$CLUSTER_NAME" ] || [ -z "$REPLAY_NAME" ]; then
-  echo "Usage: $0 <cluster-name> <replay-name>"
+  echo "Usage: $0 <cluster-name> <replay-name> [load-profile]"
   exit 1
 fi
+
+source "$SCRIPT_DIR/load-profiles.sh"
+configure_load_profile "$LOAD_PROFILE" "$REPLAY_NAME"
 
 CONFIG_FILE="$REPO_ROOT/quality/speedctl-replay/${REPLAY_NAME}.yaml"
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -92,6 +96,9 @@ runner_temp="${RUNNER_TEMP:-/tmp}"
 snapshot_dir="$runner_temp/proxymock/${name}/snapshot"
 result_dir="$runner_temp/proxymock/${name}/results"
 report_dir="$REPO_ROOT/quality/proxymock-reports/${CLUSTER_NAME}"
+if [ "$LOAD_PROFILE" != regression ]; then
+  report_dir="$report_dir/load/$LOAD_PROFILE"
+fi
 rm -rf "$snapshot_dir" "$result_dir"
 mkdir -p "$snapshot_dir" "$result_dir" "$report_dir"
 prune_file="$REPO_ROOT/quality/proxymock-prune/${name}.patterns"
@@ -207,6 +214,7 @@ proxymock replay \
   --test-against "$target" \
   --rewrite-host \
   --ignore-body-changes \
+  "${load_args[@]}" \
   --fail-if "requests.failed > 0" || replay_status=$?
 
 if [ -d "$result_dir" ] && [ "$(find "$result_dir" -type f | wc -l | tr -d ' ')" -gt 0 ]; then
