@@ -66,7 +66,8 @@ namespace=$(get_config_value "$CONFIG_FILE" "namespace")
 snapshot_id=$(get_config_value "$CONFIG_FILE" "snapshotID")
 dev_snapshot_id=$(get_config_value "$CONFIG_FILE" "devSnapshotID")
 staging_snapshot_id=$(get_config_value "$CONFIG_FILE" "stagingSnapshotID")
-proxymock_snapshot_id=$(get_config_value "$CONFIG_FILE" "proxymockSnapshotID")
+dev_proxymock_snapshot_id=$(get_config_value "$CONFIG_FILE" "devProxymockSnapshotID")
+staging_proxymock_snapshot_id=$(get_config_value "$CONFIG_FILE" "stagingProxymockSnapshotID")
 service=$(get_config_value "$CONFIG_FILE" "service")
 service_port=$(get_config_value "$CONFIG_FILE" "servicePort")
 local_port=$(get_config_value "$CONFIG_FILE" "localPort")
@@ -75,13 +76,13 @@ target=$(get_config_value "$CONFIG_FILE" "proxymockTarget")
 case "$CLUSTER_NAME" in
   dev-decoy)
     [ -n "$dev_snapshot_id" ] && snapshot_id="$dev_snapshot_id"
+    [ -n "$dev_proxymock_snapshot_id" ] && snapshot_id="$dev_proxymock_snapshot_id"
     ;;
   staging-decoy)
     [ -n "$staging_snapshot_id" ] && snapshot_id="$staging_snapshot_id"
+    [ -n "$staging_proxymock_snapshot_id" ] && snapshot_id="$staging_proxymock_snapshot_id"
     ;;
 esac
-
-[ -n "$proxymock_snapshot_id" ] && snapshot_id="$proxymock_snapshot_id"
 
 if [ -z "$name" ] || [ -z "$namespace" ] || [ -z "$snapshot_id" ] || [ -z "$service" ] || [ -z "$service_port" ] || [ -z "$local_port" ] || [ -z "$target" ]; then
   echo "Replay config is missing required proxymock fields: $CONFIG_FILE"
