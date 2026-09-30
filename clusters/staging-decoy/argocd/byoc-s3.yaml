@@ -36,6 +36,8 @@ spec:
             - namespace: banking-app
               appLabel: banking-transactions
             - namespace: banking-app
+              appLabel: banking-transactions-nr-demo
+            - namespace: banking-app
               appLabel: banking-user
         irsa:
           enabled: false
