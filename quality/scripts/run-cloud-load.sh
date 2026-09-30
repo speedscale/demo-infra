@@ -5,7 +5,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cluster=${1:-}
 case "$cluster" in
   dev-decoy) app_url=https://dev.speedscale.com ;;
-  staging-decoy) app_url=https://staging.speedscale.com ;;
+  staging-decoy) app_url=https://staging2.speedscale.com ;;
   *) echo "Usage: $0 <dev-decoy|staging-decoy>" >&2; exit 1 ;;
 esac
 root="$REPO_ROOT/quality/cloud-load-reports/$cluster"
@@ -18,7 +18,7 @@ for scenario in gateway-ramp fraud-spike ai-soak; do
   dir="$root/$scenario"
   mkdir -p "$dir"
   result=PASS
-  if ! CLOUD_REPORT_DIR="$dir" REPLAY_TIMEOUT_MINUTES=20 \
+  if ! CLOUD_REPORT_DIR="$dir" REPLAY_TIMEOUT_MINUTES=20 REPLAY_ERROR_GRACE_MINUTES=0 \
       "$SCRIPT_DIR/run-replay.sh" "$cluster" "$service" "$scenario" 2>&1 | tee "$dir/run.log"; then
     result=FAIL
     failed=1

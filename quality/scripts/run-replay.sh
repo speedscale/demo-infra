@@ -248,6 +248,9 @@ wait_for_replay() {
       info "  $name: $report_status (${elapsed}s elapsed)"
       if [ -n "$CLOUD_LOAD_PROFILE" ] && jq -e '.report.status | type == "string"' <<< "$report" >/dev/null 2>&1; then
         printf '%s\n' "$report" > "$CLOUD_REPORT_DIR/report.json"
+        kubectl -n "$namespace" get trafficreplays -o json 2>/dev/null \
+          | jq --arg rid "$rid" '[.items[] | select(.status.reportID == $rid) | {name: .metadata.name, status: .status}]' \
+          > "$CLOUD_REPORT_DIR/kubernetes-status.json" || true
       fi
 
       case "$norm" in

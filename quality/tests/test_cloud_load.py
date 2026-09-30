@@ -66,7 +66,7 @@ else:
             override = json.loads(args[args.index('--test-override')+1])
             self.assertEqual(override, json.loads((QUALITY / 'cloud-load' / (profile+'.json')).read_text()))
             self.assertNotIn('--no-mocks', args)
-        self.assertIn('https://staging.speedscale.com/report/', summary)
+        self.assertIn('https://staging2.speedscale.com/report/', summary)
         self.assertEqual(summary.count('| PASS |'), 3)
 
     def test_missed_goals_fail_but_all_scenarios_run(self):
