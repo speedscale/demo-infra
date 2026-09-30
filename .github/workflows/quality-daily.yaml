@@ -8,6 +8,10 @@ on:
       cluster:
         description: 'Cluster to replay (or "all")'
         default: 'all'
+      cloud_load_only:
+        description: 'Run only Speedscale Cloud load scenarios'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -56,7 +60,7 @@ jobs:
     name: Reset standing mocks
     runs-on: ubuntu-latest
     needs: validate-scheduled-run
-    if: needs.validate-scheduled-run.outputs.should-run == 'true'
+    if: needs.validate-scheduled-run.outputs.should-run == 'true' && !inputs.cloud_load_only
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -87,7 +91,7 @@ jobs:
     # reset must not skip the gate.
     needs: [validate-scheduled-run, reset-mocks]
     if: >-
-      !cancelled() &&
+      !cancelled() && !inputs.cloud_load_only &&
       needs.validate-scheduled-run.outputs.should-run == 'true'
     timeout-minutes: 20
     strategy:
@@ -147,7 +151,7 @@ jobs:
     needs: [validate-scheduled-run, ci-replay]
     timeout-minutes: 90
     if: >-
-      !cancelled() &&
+      !cancelled() && !inputs.cloud_load_only &&
       needs.validate-scheduled-run.outputs.should-run == 'true' &&
       (github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == 'dev-decoy')
     steps:
@@ -185,7 +189,7 @@ jobs:
     needs: [validate-scheduled-run, ci-replay]
     timeout-minutes: 90
     if: >-
-      !cancelled() &&
+      !cancelled() && !inputs.cloud_load_only &&
       needs.validate-scheduled-run.outputs.should-run == 'true' &&
       (github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == 'staging-decoy')
     steps:
@@ -223,7 +227,7 @@ jobs:
     # The load and CD replays target the same services.
     needs: [validate-scheduled-run, cd-replay-dev, cd-replay-staging]
     if: >-
-      !cancelled() &&
+      !cancelled() && !inputs.cloud_load_only &&
       needs.validate-scheduled-run.outputs.should-run == 'true'
     timeout-minutes: 45
     strategy:
@@ -264,4 +268,46 @@ jobs:
       with:
         name: load-${{ matrix.cluster }}
         path: quality/proxymock-reports/${{ matrix.cluster }}/load/
+        if-no-files-found: ignore
+
+  cloud-load:
+    name: Speedscale Cloud load (${{ matrix.cluster }})
+    runs-on: ubuntu-latest
+    needs: [validate-scheduled-run, load-scenarios]
+    if: >-
+      !cancelled() &&
+      needs.validate-scheduled-run.outputs.should-run == 'true'
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        cluster: [dev-decoy, staging-decoy]
+    steps:
+    - uses: actions/checkout@v5
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+    - name: Install speedctl
+      run: |
+        curl -fsSL https://downloads.speedscale.com/speedctl/install | bash
+        echo "$HOME/.speedscale" >> "$GITHUB_PATH"
+    - name: Configure Speedscale Cloud
+      env:
+        CONFIG_DATA: ${{ matrix.cluster == 'dev-decoy' && secrets.SPEEDCTL_DEV_CONFIG || secrets.SPEEDCTL_STAGING_CONFIG }}
+      run: |
+        mkdir -p "$RUNNER_TEMP/speedctl"
+        printf '%s\n' "$CONFIG_DATA" > "$RUNNER_TEMP/speedctl/config.yaml"
+    - name: Run Cloud load scenarios
+      if: github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == matrix.cluster
+      env:
+        SPEEDCTL_HOME: ${{ runner.temp }}/speedctl
+        SPEEDSCALE_HOME: ${{ runner.temp }}/speedctl
+      run: ./quality/scripts/run-cloud-load.sh ${{ matrix.cluster }}
+    - name: Upload Cloud reports and logs
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: cloud-load-${{ matrix.cluster }}
+        path: quality/cloud-load-reports/${{ matrix.cluster }}/
         if-no-files-found: ignore
