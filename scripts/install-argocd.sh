@@ -108,6 +108,11 @@ spec:
         env:
         - name: ARGOCD_SERVER_INSECURE
           value: "true"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: argocd-redis
+              key: auth
         volumeMounts:
         - mountPath: /app/config/ssh
           name: ssh-known-hosts
