@@ -6,9 +6,21 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 CLUSTER_NAME=${1:-}
 REPLAY_FILTER=${2:-all}
+CLOUD_LOAD_PROFILE=${3:-}
+replay_override_args=()
+if [ -n "$CLOUD_LOAD_PROFILE" ]; then
+  case "$CLOUD_LOAD_PROFILE:$REPLAY_FILTER" in
+    gateway-ramp:banking-gateway|fraud-spike:banking-fraud|ai-soak:banking-ai) ;;
+    *) echo "Unsupported Cloud load profile/service" >&2; exit 1 ;;
+  esac
+  replay_override_args=(--test-override "$(jq -c . "$REPO_ROOT/quality/cloud-load/$CLOUD_LOAD_PROFILE.json")")
+  CLOUD_REPORT_DIR="${CLOUD_REPORT_DIR:-$REPO_ROOT/quality/cloud-load-reports/$CLUSTER_NAME/$CLOUD_LOAD_PROFILE}"
+  mkdir -p "$CLOUD_REPORT_DIR"
+  rm -f "$CLOUD_REPORT_DIR/report.json" "$CLOUD_REPORT_DIR/report-id.txt"
+fi
 
 if [ -z "$CLUSTER_NAME" ]; then
-  echo "Usage: $0 <cluster-name> [replay-name|all]"
+  echo "Usage: $0 <cluster-name> [replay-name|all] [cloud-load-profile]"
   echo ""
   echo "Examples:"
   echo "  $0 dev-decoy              # run all replays"
@@ -75,6 +87,7 @@ require_test_config() {
     return 1
   fi
 
+  if [ -n "$CLOUD_LOAD_PROFILE" ]; then cp "$current" "$CLOUD_REPORT_DIR/base-test-config.json"; fi
   rm -f "$current"
 }
 
@@ -233,9 +246,17 @@ wait_for_replay() {
       report_status=$(echo "$report" | jq -r '.report.status // "unknown"' 2>/dev/null || echo "unknown")
       norm=$(echo "$report_status" | tr '[:lower:]' '[:upper:]' | tr ' ' '_')
       info "  $name: $report_status (${elapsed}s elapsed)"
+      if [ -n "$CLOUD_LOAD_PROFILE" ] && jq -e '.report.status | type == "string"' <<< "$report" >/dev/null 2>&1; then
+        printf '%s\n' "$report" > "$CLOUD_REPORT_DIR/report.json"
+      fi
 
       case "$norm" in
-        PASSED|MISSED_GOALS)
+        PASSED) return 0 ;;
+        MISSED_GOALS)
+          if [ -n "$CLOUD_LOAD_PROFILE" ]; then
+            error "  $name: Cloud load goals missed"
+            return 1
+          fi
           return 0
           ;;
         CANCELED|*CANCEL*)
@@ -307,7 +328,7 @@ for f in "${replay_files[@]}"; do
   run_attempt="${GITHUB_RUN_ATTEMPT:-1}"
   cluster_tag="${CLUSTER_NAME%-decoy}"
   workload_tag="${name#banking-}"
-  build_tag="qd:${cluster_tag}:${workload_tag}:${run_id}.${run_attempt}"
+  build_tag="${CLOUD_LOAD_PROFILE:+ql:}${CLOUD_LOAD_PROFILE:-qd}:${cluster_tag}:${workload_tag}:${run_id}.${run_attempt}"
 
   case "$CLUSTER_NAME" in
     dev-decoy)
@@ -340,6 +361,7 @@ for f in "${replay_files[@]}"; do
       --snapshot-id "$snapshot_id" \
       --test-config-id "$test_config_id" \
       --build-tag "$build_tag" \
+      "${replay_override_args[@]}" \
       ${MOCK_EXCEPT:+--mock-except $MOCK_EXCEPT} \
       --id-only 2>&1) || true
 
@@ -374,6 +396,9 @@ for f in "${replay_files[@]}"; do
   fi
 
   info "  Report ID: $report_id"
+  if [ -n "$CLOUD_LOAD_PROFILE" ]; then
+    printf '%s\n' "$report_id" > "$CLOUD_REPORT_DIR/report-id.txt"
+  fi
   report_ids["$name"]="$report_id"
   replay_statuses["$name"]="running"
 

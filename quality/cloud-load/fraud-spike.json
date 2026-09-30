@@ -1,0 +1,49 @@
+{
+  "generator": {
+    "stages": [
+      {
+        "duration": "30s",
+        "virtualUsers": {
+          "virtualUsers": "2",
+          "requestDelay": {}
+        }
+      },
+      {
+        "duration": "30s",
+        "virtualUsers": {
+          "virtualUsers": "20",
+          "requestDelay": {}
+        },
+        "rampFor": "5s"
+      },
+      {
+        "duration": "60s",
+        "virtualUsers": {
+          "virtualUsers": "2",
+          "requestDelay": {}
+        }
+      }
+    ],
+    "evaluationIntervals": 5
+  },
+  "rules": [
+    {
+      "metricName": "p95Latency",
+      "type": "TOO_HIGH",
+      "value": 500,
+      "action": "ALERT"
+    },
+    {
+      "metricName": "failTransactionCount",
+      "type": "TOO_HIGH",
+      "value": 0,
+      "action": "ALERT"
+    },
+    {
+      "metricName": "totalTransactionCount",
+      "type": "TOO_LOW",
+      "value": 1,
+      "action": "ALERT"
+    }
+  ]
+}
