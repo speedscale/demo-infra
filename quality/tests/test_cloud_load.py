@@ -25,6 +25,9 @@ class CloudLoadTest(unittest.TestCase):
                 p.chmod(0o755)
             for name in ('speedctl-replay', 'cloud-load'):
                 shutil.copytree(QUALITY / name, quality / name)
+            kubectl = root / 'kubectl'
+            kubectl.write_text("#!/usr/bin/env bash\necho '{\"items\":[]}'\n")
+            kubectl.chmod(0o755)
             cli = root / 'speedctl'
             cli.write_text('''#!/usr/bin/env python3
 import json, os, sys
