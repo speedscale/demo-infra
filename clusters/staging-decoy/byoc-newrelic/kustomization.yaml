@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: byoc-newrelic
 resources:
   - collector.yaml
+  - license-sealedsecret.yaml
 configMapGenerator:
   - name: otel-collector-config
     files:
