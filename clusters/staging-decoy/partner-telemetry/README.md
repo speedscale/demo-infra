@@ -4,6 +4,8 @@ The staging microsvc banking app sends application telemetry through `partner-tr
 
 `destinations.json` is the vendor option array. Each entry declares the adapter service, supported signals, deployment, and credential location. `enabled` defines the initial state. Add another vendor by adding its adapter and one registry entry; do not add vendor credentials or account identifiers to git.
 
+Datadog starts disabled because its BYOC adapter continuously creates GCS archive objects. Enable it for a demonstration, then turn it off when finished. Stored captures remain available while export is off.
+
 Use `manage.py` to change one live option without disturbing the others:
 
 ```bash
