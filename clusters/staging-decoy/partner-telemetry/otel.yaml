@@ -41,14 +41,14 @@
     },
     "nop/metrics": {},
     "nop/captures": {},
-    "otlp/datadog": {
-      "endpoint": "datadog-partner.observability.svc.cluster.local:4317",
+    "otlp/dynatrace": {
+      "endpoint": "otel-collector.byoc-dynatrace.svc.cluster.local:4317",
       "tls": {
         "insecure": true
       }
     },
-    "otlp/dynatrace": {
-      "endpoint": "otel-collector.byoc-dynatrace.svc.cluster.local:4317",
+    "otlp/newrelic": {
+      "endpoint": "otel-collector.byoc-newrelic.svc.cluster.local:4317",
       "tls": {
         "insecure": true
       }
@@ -74,8 +74,8 @@
         ],
         "exporters": [
           "otlp/original",
-          "otlp/datadog",
-          "otlp/dynatrace"
+          "otlp/dynatrace",
+          "otlp/newrelic"
         ]
       },
       "logs": {
@@ -100,7 +100,8 @@
         ],
         "exporters": [
           "nop/metrics",
-          "otlp/dynatrace"
+          "otlp/dynatrace",
+          "otlp/newrelic"
         ]
       },
       "logs/captures": {
@@ -113,8 +114,8 @@
         ],
         "exporters": [
           "nop/captures",
-          "otlp/datadog",
-          "otlp/dynatrace"
+          "otlp/dynatrace",
+          "otlp/newrelic"
         ]
       }
     }

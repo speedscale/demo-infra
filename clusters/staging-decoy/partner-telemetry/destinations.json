@@ -1,7 +1,7 @@
 [
   {
     "name": "datadog",
-    "enabled": true,
+    "enabled": false,
     "endpoint": "datadog-partner.observability.svc.cluster.local:4317",
     "signals": ["traces", "captures"],
     "namespace": "observability",

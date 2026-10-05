@@ -15,9 +15,9 @@ class RouterTests(unittest.TestCase):
 
     def test_default_destinations_are_independent(self):
         config = render.build_config(self.destinations)
-        self.assertTrue(manage.configured(config, self.by_name["datadog"]))
+        self.assertFalse(manage.configured(config, self.by_name["datadog"]))
         self.assertTrue(manage.configured(config, self.by_name["dynatrace"]))
-        self.assertFalse(manage.configured(config, self.by_name["newrelic"]))
+        self.assertTrue(manage.configured(config, self.by_name["newrelic"]))
         self.assertNotIn("otlp/datadog", config["service"]["pipelines"]["metrics"]["exporters"])
         self.assertIn("otlp/dynatrace", config["service"]["pipelines"]["metrics"]["exporters"])
         self.assertNotIn("otlp/original", config["service"]["pipelines"]["metrics"]["exporters"])
