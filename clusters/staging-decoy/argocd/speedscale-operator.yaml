@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://speedscale.github.io/operator-helm/
     chart: speedscale-operator
-    targetRevision: 2.5.1059
+    targetRevision: 2.5.1133
     helm:
       values: |
         apiKeySecret: speedscale-apikey
