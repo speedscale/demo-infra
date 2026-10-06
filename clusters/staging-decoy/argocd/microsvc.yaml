@@ -17,6 +17,16 @@ spec:
     kustomize:
       patches:
         - target:
+            kind: Deployment
+            name: banking-(accounts|ai|fraud|frontend|gateway|notification|transactions|user)
+          patch: |-
+            - op: add
+              path: /metadata/annotations/sidecar.speedscale.com~1tag
+              value: v2.5.1133
+            - op: add
+              path: /spec/template/metadata/annotations/sidecar.speedscale.com~1tag
+              value: v2.5.1133
+        - target:
             kind: ConfigMap
             name: banking-user-config
           patch: &grpc-otel-endpoint |-
