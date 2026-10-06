@@ -11,6 +11,53 @@ spec:
     repoURL: https://github.com/speedscale/microsvc
     targetRevision: HEAD
     path: kubernetes/overlays/speedscale
+    kustomize:
+      patches:
+        - target:
+            kind: Deployment
+            name: banking-gateway
+          patch: |-
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: banking-gateway
+              annotations:
+                capture.speedscale.com/java-agent-tag: v0.1.89
+            spec:
+              template:
+                metadata:
+                  annotations:
+                    capture.speedscale.com/java-agent-tag: v0.1.89
+        - target:
+            kind: Deployment
+            name: banking-accounts
+          patch: |-
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: banking-accounts
+              annotations:
+                capture.speedscale.com/java-agent-tag: v0.1.89
+            spec:
+              template:
+                metadata:
+                  annotations:
+                    capture.speedscale.com/java-agent-tag: v0.1.89
+        - target:
+            kind: Deployment
+            name: banking-transactions
+          patch: |-
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: banking-transactions
+              annotations:
+                capture.speedscale.com/java-agent-tag: v0.1.89
+            spec:
+              template:
+                metadata:
+                  annotations:
+                    capture.speedscale.com/java-agent-tag: v0.1.89
   destination:
     server: https://kubernetes.default.svc
     namespace: banking-app
