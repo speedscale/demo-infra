@@ -68,7 +68,7 @@ jobs:
         cluster: [dev-decoy, staging-decoy]
     steps:
     - name: Checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Install doctl
       uses: digitalocean/action-doctl@v2
@@ -107,7 +107,7 @@ jobs:
           - banking-user
     steps:
     - name: Checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Install doctl
       uses: digitalocean/action-doctl@v2
@@ -115,9 +115,8 @@ jobs:
         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
     - name: Install proxymock
-      run: |
-        curl -sL https://downloads.speedscale.com/proxymock/install-proxymock | sh
-        echo "$HOME/.speedscale" >> $GITHUB_PATH
+      timeout-minutes: 5
+      run: ./quality/scripts/install-latest-tool.sh proxymock
 
     - name: Configure speedctl for CI replay
       env:
@@ -156,7 +155,7 @@ jobs:
       (github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == 'dev-decoy')
     steps:
     - name: Checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Install doctl
       uses: digitalocean/action-doctl@v2
@@ -164,9 +163,8 @@ jobs:
         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
     - name: Install speedctl
-      run: |
-        curl -sL https://downloads.speedscale.com/speedctl/install | bash
-        echo "$HOME/.speedscale" >> $GITHUB_PATH
+      timeout-minutes: 5
+      run: ./quality/scripts/install-latest-tool.sh speedctl
 
     - name: Configure speedctl
       env:
@@ -194,7 +192,7 @@ jobs:
       (github.event_name != 'workflow_dispatch' || github.event.inputs.cluster == 'all' || github.event.inputs.cluster == 'staging-decoy')
     steps:
     - name: Checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Install doctl
       uses: digitalocean/action-doctl@v2
@@ -202,9 +200,8 @@ jobs:
         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
     - name: Install speedctl
-      run: |
-        curl -sL https://downloads.speedscale.com/speedctl/install | bash
-        echo "$HOME/.speedscale" >> $GITHUB_PATH
+      timeout-minutes: 5
+      run: ./quality/scripts/install-latest-tool.sh speedctl
 
     - name: Configure speedctl
       env:
@@ -236,7 +233,7 @@ jobs:
         cluster: [dev-decoy, staging-decoy]
     steps:
     - name: Checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Install doctl
       uses: digitalocean/action-doctl@v2
@@ -244,9 +241,8 @@ jobs:
         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
     - name: Install proxymock
-      run: |
-        curl -fsSL https://downloads.speedscale.com/proxymock/install-proxymock | sh
-        echo "$HOME/.speedscale" >> "$GITHUB_PATH"
+      timeout-minutes: 5
+      run: ./quality/scripts/install-latest-tool.sh proxymock
 
     - name: Configure load replay
       env:
@@ -283,15 +279,14 @@ jobs:
       matrix:
         cluster: [dev-decoy, staging-decoy]
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v7
     - name: Install doctl
       uses: digitalocean/action-doctl@v2
       with:
         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
     - name: Install speedctl
-      run: |
-        curl -fsSL https://downloads.speedscale.com/speedctl/install | bash
-        echo "$HOME/.speedscale" >> "$GITHUB_PATH"
+      timeout-minutes: 5
+      run: ./quality/scripts/install-latest-tool.sh speedctl
     - name: Configure Speedscale Cloud
       env:
         CONFIG_DATA: ${{ matrix.cluster == 'dev-decoy' && secrets.SPEEDCTL_DEV_CONFIG || secrets.SPEEDCTL_STAGING_CONFIG }}
