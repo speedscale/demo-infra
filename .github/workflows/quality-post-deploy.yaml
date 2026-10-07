@@ -19,7 +19,7 @@ jobs:
         cluster: [dev-decoy, staging-decoy]
     steps:
     - name: Checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
 
     - name: Install doctl
       uses: digitalocean/action-doctl@v2
@@ -27,9 +27,8 @@ jobs:
         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
     - name: Install speedctl
-      run: |
-        curl -sL https://downloads.speedscale.com/speedctl/install | bash
-        echo "$HOME/.speedscale" >> $GITHUB_PATH
+      timeout-minutes: 5
+      run: ./quality/scripts/install-latest-tool.sh speedctl
 
     - name: Configure speedctl
       env:
