@@ -84,6 +84,11 @@ case "$CLUSTER_NAME" in
     ;;
 esac
 
+if [ "$LOAD_PROFILE" != regression ]; then
+  load_snapshot_id=$(get_config_value "$CONFIG_FILE" "loadSnapshotID")
+  [ -n "$load_snapshot_id" ] && snapshot_id="$load_snapshot_id"
+fi
+
 if [ -z "$name" ] || [ -z "$namespace" ] || [ -z "$snapshot_id" ] || [ -z "$service" ] || [ -z "$service_port" ] || [ -z "$local_port" ] || [ -z "$target" ]; then
   echo "Replay config is missing required proxymock fields: $CONFIG_FILE"
   exit 1
@@ -114,7 +119,7 @@ pulled=false
 for attempt in 1 2 3; do
   rm -rf "$snapshot_dir"
   mkdir -p "$snapshot_dir"
-  if proxymock cloud pull snapshot "$snapshot_id" \
+  if timeout --kill-after=30s "${SNAPSHOT_PULL_TIMEOUT_SECONDS:-300}" proxymock cloud pull snapshot "$snapshot_id" \
       --config "$SPEEDCTL_HOME/config.yaml" \
       --out "$snapshot_dir"; then
     pulled=true

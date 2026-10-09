@@ -11,14 +11,23 @@ SELECT = SCRIPT.split('name=$(get_config_value', 1)[1].split('if [ -z "$name" ]'
 
 
 class SnapshotSelectionTest(unittest.TestCase):
-    def select(self, cluster, service):
+    def select(self, cluster, service, profile="regression"):
         shell = 'set -eu\nget_config_value() {' + GET_VALUE + '\n}\nname=$(get_config_value' + SELECT
         shell += '\nprintf "%s" "$snapshot_id"\n'
         result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True,
-                                env=dict(os.environ, CLUSTER_NAME=cluster,
+                                env=dict(os.environ, CLUSTER_NAME=cluster, LOAD_PROFILE=profile,
                                          CONFIG_FILE=str(QUALITY / 'speedctl-replay' / (service + '.yaml'))))
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
+
+    def test_load_uses_repeatable_fixture_in_both_clusters(self):
+        for cluster in ('dev-decoy', 'staging-decoy'):
+            for service, profile, snapshot in (
+                ('banking-gateway', 'gateway-ramp', '4f2b0637-f69d-4787-8f11-24cecc812cb2'),
+                ('banking-ai', 'ai-soak', '35ae88c7-f4c2-4d56-89c3-0b645c7d8e11'),
+            ):
+                with self.subTest(cluster=cluster, service=service):
+                    self.assertEqual(self.select(cluster, service, profile), snapshot)
 
     def test_gateway_staging_uses_staging_snapshot(self):
         self.assertEqual(self.select('staging-decoy', 'banking-gateway'),

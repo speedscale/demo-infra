@@ -4,6 +4,7 @@ namespace: banking-replay
 snapshotID: 739f8a49-8b92-43c3-8a84-7fa498ce43f0
 devSnapshotID: 739f8a49-8b92-43c3-8a84-7fa498ce43f0
 stagingSnapshotID: 739f8a49-8b92-43c3-8a84-7fa498ce43f0
+loadSnapshotID: 35ae88c7-f4c2-4d56-89c3-0b645c7d8e11
 testConfigID: banking-daily-replay
 service: banking-ai
 servicePort: 8080

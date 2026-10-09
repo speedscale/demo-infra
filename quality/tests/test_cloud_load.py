@@ -69,6 +69,10 @@ else:
             override = json.loads(args[args.index('--test-override')+1])
             self.assertEqual(override, json.loads((QUALITY / 'cloud-load' / (profile+'.json')).read_text()))
             self.assertNotIn('--no-mocks', args)
+            if profile in ('gateway-ramp', 'ai-soak'):
+                expected = {'gateway-ramp': '4f2b0637-f69d-4787-8f11-24cecc812cb2',
+                            'ai-soak': '35ae88c7-f4c2-4d56-89c3-0b645c7d8e11'}[profile]
+                self.assertEqual(args[args.index('--snapshot-id')+1], expected)
         self.assertIn('https://staging2.speedscale.com/report/', summary)
         self.assertEqual(summary.count('| PASS |'), 3)
 
