@@ -39,7 +39,7 @@ def ai_pairs():
     providers = [
         ('anthropic', 'Anthropic Claude', 'claude-sonnet-4-20250514', 'api.anthropic.com', '/v1/messages'),
         ('openai', 'OpenAI GPT-4o Mini', 'gpt-4o-mini', 'api.openai.com', '/v1/chat/completions'),
-        ('gemini', 'Google Gemini', 'gemini-2.0-flash', 'generativelanguage.googleapis.com', '/v1beta/models/gemini-2.0-flash:generateContent?key='),
+        ('gemini', 'Google Gemini', 'gemini-2.0-flash', 'generativelanguage.googleapis.com', '/v1beta/models/gemini-2.0-flash:generateContent?key=mock-gemini-key-served-by-speedscale-responder'),
         ('xai', 'xAI Grok', 'grok-3-mini', 'api.x.ai', '/v1/chat/completions'),
         ('openrouter', 'OpenRouter Mistral', 'mistralai/mistral-small-3.2-24b-instruct', 'openrouter.ai', '/api/v1/chat/completions'),
     ]
