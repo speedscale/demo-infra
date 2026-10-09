@@ -18,6 +18,22 @@ spec:
       patches:
         - target:
             kind: Deployment
+            name: banking-gateway
+          patch: |-
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: banking-gateway
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: api-gateway
+                      env:
+                        - name: FAULT_INJECTION_RATE
+                          value: "0"
+        - target:
+            kind: Deployment
             name: banking-transactions
           patch: |-
             - op: add

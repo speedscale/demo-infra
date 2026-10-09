@@ -341,6 +341,10 @@ for f in "${replay_files[@]}"; do
       [ -n "$staging_snapshot_id" ] && snapshot_id="$staging_snapshot_id"
       ;;
   esac
+  if [ -n "$CLOUD_LOAD_PROFILE" ]; then
+    load_snapshot_id=$(get_config_value "$f" "loadSnapshotID")
+    [ -n "$load_snapshot_id" ] && snapshot_id="$load_snapshot_id"
+  fi
 
   if [ ${#build_tag} -gt 50 ]; then
     error "Build tag is too long (${#build_tag} chars): $build_tag"

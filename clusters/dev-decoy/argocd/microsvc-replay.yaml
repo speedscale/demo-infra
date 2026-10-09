@@ -11,6 +11,24 @@ spec:
     repoURL: https://github.com/speedscale/microsvc
     targetRevision: HEAD
     path: kubernetes/overlays/replay
+    kustomize:
+      patches:
+        - target:
+            kind: Deployment
+            name: banking-gateway
+          patch: |-
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: banking-gateway
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: api-gateway
+                      env:
+                        - name: FAULT_INJECTION_RATE
+                          value: "0"
   destination:
     server: https://kubernetes.default.svc
     namespace: banking-replay

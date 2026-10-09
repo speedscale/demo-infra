@@ -4,8 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/quality-*.yaml'
-      - 'quality/scripts/install-latest-tool.sh'
-      - 'quality/tests/test_tool_install.py'
+      - 'quality/**'
   workflow_dispatch:
 
 permissions:
@@ -17,8 +16,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - name: Test installation failure handling
-        run: python3 -m unittest discover -s quality/tests -p test_tool_install.py
+      - name: Test quality runners
+        run: python3 -m unittest discover -s quality/tests
       - name: Install latest speedctl
         timeout-minutes: 5
         run: ./quality/scripts/install-latest-tool.sh speedctl
