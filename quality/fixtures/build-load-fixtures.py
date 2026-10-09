@@ -72,7 +72,7 @@ def gateway_pairs():
             value = f'load-fixture-{suffix}' + ('@example.invalid' if field == 'email' else '')
             uri = f'/api/users/check-{field}?{field}={value}'
             response = {'success': True, 'available': True, 'message': f'{field.title()} is available'}
-            pairs.append(pair('banking-gateway', 'OUT', 'banking-user', 8080, 'GET', uri, None, response))
+            pairs.append(pair('banking-gateway', 'OUT', 'banking-user', 80, 'GET', uri, None, response))
             pairs.append(pair('banking-gateway', 'IN', 'banking-gateway', 8080, 'GET', uri, None, response))
     pairs.append(pair('banking-gateway', 'IN', 'banking-gateway', 8080, 'GET', '/api/accounts', None, None, 401))
     return pairs

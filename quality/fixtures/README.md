@@ -1,6 +1,6 @@
 # Repeatable daily load fixtures
 
-The gateway ramp uses username and email availability lookups plus a missing-token request that must return 401. These operations can repeat at increasing concurrency without registering users, creating accounts, or changing balances. Stateful account and transaction behavior remains in the CI/CD regression replays. The replay namespace sets `FAULT_INJECTION_RATE=0`; the capture/demo namespace retains its injected faults.
+The gateway ramp uses username and email availability lookups plus a missing-token request that must return 401. These operations can repeat at increasing concurrency without registering users, creating accounts, or changing balances. Stateful account and transaction behavior remains in the CI/CD regression replays. Outbound gateway fixtures target `banking-user:80`, matching `USER_SERVICE_URL`; port 8080 is the dependency container port and does not intercept gateway calls. The replay namespace sets `FAULT_INJECTION_RATE=0`; the capture/demo namespace retains its injected faults.
 
 The AI soak exercises three en-US questions across all five providers. Provider responses are synthetic and fixed. Request bodies include the current locale instruction and remain fully matched; Gemini uses the public dummy key configured by the banking demo (`mock-gemini-key-served-by-speedscale-responder`). Cloud status and response-body assertions remain enforced, with `durationMs` ignored by the existing base config.
 
