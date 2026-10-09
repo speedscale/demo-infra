@@ -26,4 +26,24 @@ Use workflow dispatch with `cloud_load_only=true` and `cluster=dev-decoy`, `stag
 
 Timed gateway and AI profiles select the repeatable synthetic fixtures described in [fixtures/README.md](fixtures/README.md); CI/CD regression snapshots remain separate. Gateway load covers read-only availability lookups and an authentication rejection, rather than looping stateful account creation against one shared rate-limit bucket. AI fixtures match the current locale-aware requests to all five providers.
 
-The Cloud path does not fix generator cancellation accounting or application errors exposed by load. These remain visible as failed goals. Live validation on September 30 passed fraud-spike in both clusters. Gateway-ramp and ai-soak failed provisioning in both clusters because the operator could not create a responder Istio peer-auth policy (`resource already exists`), before their load stages ran. See [the validation run](https://github.com/speedscale/demo-infra/actions/runs/36737446861). Those profiles need successful reruns after the operator issue is fixed before treating the suite as established coverage.
+The Cloud path does not fix generator cancellation accounting or application errors exposed by load. These remain visible as failed goals.
+
+## October 9 validation
+
+All six full native Cloud profiles and all six full proxymock profiles passed on dev and staging. Every Cloud report passed 100% of response assertions and recorded zero failed transactions. Gateway and AI had zero outbound mock misses; fraud has no outbound mocks.
+
+| Cloud profile | Dev transactions / p95 ms | Staging transactions / p95 ms |
+| --- | ---: | ---: |
+| Gateway ramp | [23,665 / 102](https://dev.speedscale.com/report/8fc63f7e-faf9-45e2-a040-990a11f1a4f9) | [24,718 / 98.59](https://staging2.speedscale.com/report/4d3d0b23-8268-4dca-b5fa-e332859b5a79) |
+| Fraud spike | [14,070 / 149.16](https://dev.speedscale.com/report/5667f4e1-729c-4671-ac0b-9df93df4b55a) | [14,244 / 143.02](https://staging2.speedscale.com/report/de3d774a-b8a8-4849-aeb4-73123e21725e) |
+| AI soak | [2,187 / 361.04](https://dev.speedscale.com/report/bf3f045b-7641-402f-871f-0d7c48fd8a62) | [2,123 / 383.37](https://staging2.speedscale.com/report/1297a1d3-df32-4638-b1bb-ae39ba3bf092) |
+
+| Proxymock profile | Dev requests / p95 ms | Staging requests / p95 ms |
+| --- | ---: | ---: |
+| Gateway ramp | 17,524 / 114.5 | 19,114 / 106.4 |
+| Fraud spike | 11,511 / 107.3 | 12,071 / 106 |
+| AI soak | 1,673 / 489.4 | 1,595 / 504.3 |
+
+The full gateway/AI Cloud runs and full proxymock mix used the deployed v2.5.1149 runtime components. Cloud fraud was launched with the current v2.5.1169 CLI against those operators. All three proxymock profiles also passed short compatibility runs on both clusters with v2.5.1169, retaining the same response-status, failure, 4xx-baseline, and latency gates. Short compatibility runs do not replace the full-duration results above.
+
+The v2.5.1169 operator chart and staging capture tags are staged in the PR. Both chart renders retain the existing tenant-secret references, DLP configuration, and exporter destinations. The live operator upgrade remains pending merge; these results do not claim validation of that future rollout. The earlier September 30 provisioning failure is no longer an accurate description of the current load results.
