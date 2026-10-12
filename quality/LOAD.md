@@ -14,6 +14,8 @@ Run the mix with `./quality/scripts/run-daily-load.sh dev-decoy`, or one profile
 
 The load profiles retain response collection and existing regression goals, request-failure checks, 5xx checks, and the recorded 4xx baseline check. They additionally fail on zero delivered requests or a missed p95 budget. Existing assertion failures remain failures. This is bounded concurrency testing with diagnostics, not the CLI's reduced-data `--load-test` mode. Latency budgets cover the whole scenario; recovery-stage latency is not evaluated separately.
 
+The proxymock AI soak selects `quality/test-configs/proxymock-ai-load.json`, which retains the regression assertions and gives each HTTP request a 40-second deadline. The application waits for five provider calls with 30-second provider timeouts, so proxymock's implicit 10-second deadline can abort a valid slow response. The native Cloud AI override uses the same 40-second request deadline. The 5-minute soak, 8-minute proxymock replay limit, 2,000 ms p95 ceiling, and zero-failed-request gate remain enforced. This does not identify or repair a particular slow provider or port-forward interruption.
+
 Each cluster gets a GitHub job summary with scenario status, delivered requests, achieved RPS, p95, and p99. JSON reports and command logs are uploaded even on failure. All three scenarios are attempted; a failed scenario fails the final job. Requests travel through kubectl port forwarding from the runner, so latency includes that connection and throughput can be limited by it. Use an in-cluster generator for capacity measurements.
 
 ## Speedscale Cloud load

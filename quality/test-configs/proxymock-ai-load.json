@@ -1,0 +1,44 @@
+{
+  "id": "proxymock-ai-load",
+  "generator": {
+    "stages": [
+      {
+        "virtualUsers": {
+          "virtualUsers": "1",
+          "requestDelay": {}
+        }
+      }
+    ],
+    "requestTimeoutSeconds": 40
+  },
+  "rules": [
+    {
+      "metricName": "passAssertPct",
+      "type": "TOO_LOW",
+      "value": 100,
+      "action": "ALERT"
+    }
+  ],
+  "version": 3,
+  "assertionGroups": [
+    {
+      "configs": [
+        {
+          "type": "httpStatusCode"
+        },
+        {
+          "type": "httpHeaders",
+          "config": {
+            "headers": "Content-Type"
+          }
+        },
+        {
+          "type": "httpResponseSchema"
+        },
+        {
+          "type": "httpResponseContentType"
+        }
+      ]
+    }
+  ]
+}

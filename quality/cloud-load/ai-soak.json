@@ -9,7 +9,8 @@
         }
       }
     ],
-    "evaluationIntervals": 5
+    "evaluationIntervals": 5,
+    "requestTimeoutSeconds": 40
   },
   "rules": [
     {

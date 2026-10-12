@@ -1,4 +1,5 @@
 """Exercise load orchestration with failing and missing scenario reports."""
+import json
 import os
 from pathlib import Path
 import shutil
@@ -63,6 +64,25 @@ if [ "$MODE" = failure ] && [ "$3" = gateway-ramp ]; then exit 7; fi
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Unsupported load profile/service", result.stderr)
         self.assertNotIn("Connecting to cluster", result.stdout)
+
+    def test_ai_deadline_covers_provider_budget_without_changing_load_gates(self):
+        result = subprocess.run(["bash", "-c", 'source "$1"; configure_load_profile ai-soak banking-ai; printf "%s\\n" "${load_args[@]}"',
+                                 "test", str(SCRIPTS / "load-profiles.sh")],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        args = result.stdout.splitlines()
+        config_file = Path(args[args.index("--test-config") + 1])
+        config = json.loads(config_file.read_text())
+        self.assertEqual(config["id"], config_file.stem)
+        cloud_config = json.loads((SCRIPTS.parent / "cloud-load/ai-soak.json").read_text())
+        self.assertEqual(config["generator"]["requestTimeoutSeconds"],
+                         cloud_config["generator"]["requestTimeoutSeconds"])
+        self.assertGreater(config["generator"]["requestTimeoutSeconds"], 30)
+        self.assertLess(config["generator"]["requestTimeoutSeconds"], 180)
+        self.assertEqual(args[args.index("--for") + 1], "5m")
+        self.assertEqual(args[args.index("--timeout") + 1], "8m")
+        self.assertIn("latency.p95 > 2000", args)
+        self.assertIn("requests.total < 1", args)
 
     def test_profiles_include_delivery_and_latency_gates(self):
         for profile, service in (("gateway-ramp", "banking-gateway"),
