@@ -16,7 +16,8 @@ configure_load_profile() {
       load_p95_ms=500
       ;;
     ai-soak:banking-ai)
-      load_args=(--vus 2 --for 5m)
+      load_args=(--test-config "$(dirname "${BASH_SOURCE[0]}")/../test-configs/proxymock-ai-load.json"
+        --vus 2 --for 5m)
       load_p95_ms=2000
       ;;
     *) echo "Unsupported load profile/service: $profile/$service" >&2; return 1 ;;
