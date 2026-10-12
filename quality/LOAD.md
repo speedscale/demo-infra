@@ -48,4 +48,14 @@ All six full native Cloud profiles and all six full proxymock profiles passed on
 
 The full gateway/AI Cloud runs and full proxymock mix used the deployed v2.5.1149 runtime components. Cloud fraud was launched with the current v2.5.1169 CLI against those operators. All three proxymock profiles also passed short compatibility runs on both clusters with v2.5.1169, retaining the same response-status, failure, 4xx-baseline, and latency gates. Short compatibility runs do not replace the full-duration results above.
 
-The v2.5.1169 operator chart and staging capture tags are staged in the PR. Both chart renders retain the existing tenant-secret references, DLP configuration, and exporter destinations. The live operator upgrade remains pending merge; these results do not claim validation of that future rollout. The earlier September 30 provisioning failure is no longer an accurate description of the current load results.
+The v2.5.1169 operator chart and staging capture tags were staged in [PR #127](https://github.com/speedscale/demo-infra/pull/127), which merged on October 9. Both live operators were confirmed on v2.5.1169 on October 12. The October 9 results above used the pre-upgrade runtime; both chart renders retained the existing tenant-secret references, DLP configuration, and exporter destinations. The earlier September 30 provisioning failure is no longer an accurate description of the current load results.
+
+## October 12 AI timeout
+
+[The daily run](https://github.com/speedscale/demo-infra/actions/runs/38258565985) failed only staging's proxymock AI soak: one of 1,736 `/api/chat` requests exhausted the HTTP client's implicit 10-second response-header deadline. Its 472 ms p95 passed; gateway, fraud, both CD jobs, every CI replay, and both native Cloud load jobs passed. The complete scheduled runs on October 10 and 11 had passed after PR #127 merged.
+
+A controlled reproduction through the real local AI handler delayed one provider response by 11 seconds. The default client failed one of 40 requests while its p95 goal passed; the AI-specific 40-second request budget completed all 40 with zero failures. An invalid application route still failed the assertion goal. All 23 runner tests pass. The original artifact does not identify which provider or network hop stalled; no particular dependency outage is inferred.
+
+Full five-minute rechecks passed with the new configuration: proxymock dev delivered 1,716 requests at p95 500.7 ms, and staging delivered 1,693 at p95 478.1 ms, both with zero request failures and 100% assertions. [The native Cloud dev soak](https://dev.speedscale.com/report/e9e514e1-2394-4043-9d1a-76abf4a551d8) passed all goals with its actual request timeout confirmed at 40 seconds. The live operators were v2.5.1169.
+
+After merging the request-budget fix, dispatch a new Daily Quality Replays run on main. Re-running the old failed run uses its old commit and therefore its old request deadline.
