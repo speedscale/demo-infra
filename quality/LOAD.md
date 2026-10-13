@@ -62,10 +62,22 @@ After merging the request-budget fix, dispatch a new Daily Quality Replays run o
 
 ## Runtime and safe overlap
 
-The October 13 dev Cloud load step took 27m14s: gateway 13m34s, fraud 5m18s, and AI 8m22s. The configured traffic totals eleven minutes. The remaining time includes provisioning and SUT rollouts, restoration, Cloud analysis, and observing completion. Gateway load ended at 14:00:40 UTC, analysis started at 14:01:47, the verdict arrived at 14:07:38, and the old one-minute poll observed it at 14:08:20. The report also warned that the gateway container exceeded 95% of its CPU limit during the test; the runner does not mask that warning or lower traffic to avoid it.
+The October 13 dev Cloud load step took 27m14s: gateway 13m34s, fraud 5m18s, and AI 8m22s. The configured traffic totals eleven minutes. The remaining time includes provisioning and SUT rollouts, restoration, Cloud analysis, and observing completion. Gateway load ended at 14:00:40 UTC, analysis started at 14:01:47, the verdict arrived at 14:07:38, and the old one-minute poll observed it at 14:08:20. The report also warned that the gateway container exceeded 95% of its CPU limit during the test; the runner does not mask that warning or lower traffic to avoid it. The original analyzer log recorded waiting for additional results at 14:01:41 UTC, a later extraction at 14:05:20, aggregation complete at 14:05:22, and recommendations running from 14:05:22 to 14:07:36. These timestamps distinguish collecting/processing recorded data and recommendation generation from the already completed load. They do not identify a particular storage or CPU bottleneck.
 
 The runner checks report status every ten seconds and accepts the operator finished lifecycle event even when the report status has not yet changed to Analyzing. Before overlapping analysis with the next test, it requires every application deployment in banking-replay to have no replay ownership labels, an observed and fully ready restored generation with no extra replicas, and no replay inventory pods or pods carrying replay ownership anywhere in banking-replay. Terminating pods count as present. Failed API reads and missing status fields cannot release the workload. A report marked Analyzing alone is insufficient.
 
 One traffic scenario runs at a time in each cluster. Gateway, fraud, and AI still share node capacity and application dependencies, so their load generators do not run together. CI and dev CD also remain ordered because Cloud replay patches the services that CI targets. Dev and staging can run simultaneously because their workloads and cluster capacity are separate. Cloud analysis runs outside these demo clusters and can overlap later tests after the restoration checks pass. Once the final Cloud workload is released, proxymock load runs while remaining Cloud verdicts finish. The job waits for every report and preserves assertion, delivery, mock utilization, latency, and request-timeout gates.
 
 Each scenario's release marker is removed before launch. If restoration is not confirmed, the runner stops launching further traffic and fails. Cloud waits retain the twenty-minute report budget, with up to five additional minutes to confirm restoration after a report concludes; proxymock retains its forty-five-minute orchestration budget and eight-minute per-profile replay limits. The combined load step has a seventy-five-minute limit.
+
+### October 13 runtime validation
+
+A fixed checkout of the runtime change completed all three full Cloud profiles and all three full proxymock profiles on dev. Cloud finished in 17m39s versus 27m14s in the morning run. The combined Cloud/proxymock path finished in 27m52s versus 39m00s for the morning's sequential load steps. These are observed dev timings, not a guaranteed daily duration; the complete two-cluster workflow still needs a fresh run after merge. Both CLIs were v2.5.1176.
+
+| Profile | Cloud transactions / p95 ms | Proxymock requests / p95 ms |
+| --- | ---: | ---: |
+| Gateway ramp | [19,401 / 133.4](https://dev.speedscale.com/report/d5024aa4-6641-4f2e-9c1a-540ea8824479) | 18,411 / 106.5 |
+| Fraud spike | [15,006 / 145.9](https://dev.speedscale.com/report/c3c7d0b7-ba21-428f-b254-6487f0de83f7) | 11,679 / 110.3 |
+| AI soak | [2,805 / 297.4](https://dev.speedscale.com/report/2f8ad268-01b4-44c8-9090-d87b87da02d6) | 1,363 / 604.1 |
+
+All Cloud goals passed with 100% response assertions and zero failed transactions; gateway and AI also had zero mock misses. All proxymock delivery and latency gates passed. Generator lifecycle timestamps confirmed no overlap between the three Cloud traffic intervals, and the final Cloud release preceded proxymock traffic. All 37 runner tests and actionlint passed.
