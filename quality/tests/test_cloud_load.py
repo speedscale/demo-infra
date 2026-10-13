@@ -11,13 +11,13 @@ QUALITY = Path(__file__).resolve().parents[1]
 
 
 class CloudLoadTest(unittest.TestCase):
-    def run_cloud(self, status):
+    def run_cloud(self, status, pipeline=False, blocked=False, finished=False):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             quality = root / 'quality'
             scripts = quality / 'scripts'
             scripts.mkdir(parents=True)
-            for name in ('run-replay.sh', 'run-cloud-load.sh'):
+            for name in ('run-replay.sh', 'run-cloud-load.sh', 'check-replay-released.sh'):
                 shutil.copy(QUALITY / 'scripts' / name, scripts)
             for name in ('connect-cluster.sh', 'check-speedscale-certs.sh'):
                 p = scripts / name
@@ -26,11 +26,11 @@ class CloudLoadTest(unittest.TestCase):
             for name in ('speedctl-replay', 'cloud-load'):
                 shutil.copytree(QUALITY / name, quality / name)
             kubectl = root / 'kubectl'
-            kubectl.write_text("#!/usr/bin/env bash\necho '{\"items\":[]}'\n")
+            kubectl.write_text('#!/usr/bin/env python3\nimport json, os, sys\nif os.environ[\'BLOCKED\'] == \'true\': print(\'{}\')\nelif \'deployments\' in sys.argv:\n print(json.dumps({\'items\':[{\'metadata\':{\'name\':\'banking-\'+name,\'generation\':1,\'labels\':{}},\'spec\':{\'replicas\':1},\'status\':{\'observedGeneration\':1,\'updatedReplicas\':1,\'readyReplicas\':1,\'replicas\':1}} for name in [\'gateway\',\'fraud\',\'ai\']]}))\nelse: print(\'{"items":[]}\')\n')
             kubectl.chmod(0o755)
             cli = root / 'speedctl'
             cli.write_text('''#!/usr/bin/env python3
-import json, os, sys
+import json, os, sys, time
 from pathlib import Path
 a=sys.argv[1:]
 if a[:2] == ['infra','replay']:
@@ -41,7 +41,11 @@ elif a[:2] == ['get','test-config']:
 elif a[:2] == ['get','snapshot']:
     print(json.dumps({'tokenConfigId':'banking-jwt-resign','tokenizerConfig':{'id':'banking-jwt-resign','generator':[{'transforms':[{'type':'jwt_resign'}]}],'generatorExpectedEnvironment':{'secrets':['fixture']}},'outTraffic':[]}))
 elif a[:2] == ['get','report']:
-    print(json.dumps({'report':{'status':os.environ['REPORT_STATUS']}}))
+    status=os.environ['REPORT_STATUS']
+    if os.environ['PIPELINE'] == 'true' and len(Path(os.environ['CALLS']).read_text().splitlines()) < 3:
+        status='Testing' if os.environ['FINISHED'] == 'true' else 'Analyzing'
+        time.sleep(0.02)
+    print(json.dumps({'report':{'status':status, 'lifecycleEvents':[{'component':'operator','beat':'finished','state':'RLS_COMPLETED'}] if os.environ['FINISHED'] == 'true' else []}}))
 else:
     print('{}')
 ''')
@@ -49,12 +53,13 @@ else:
             calls = root / 'calls.jsonl'
             env = dict(os.environ, PATH=str(root)+os.pathsep+os.environ['PATH'],
                        SPEEDCTL_HOME=str(root / 'speedctl-home'),
-                       REPORT_STATUS=status, CALLS=str(calls),
-                       REPLAY_ERROR_GRACE_MINUTES='0', REPLAY_CHECK_INTERVAL='0')
+                       REPORT_STATUS=status, CALLS=str(calls), PIPELINE=str(pipeline).lower(),
+                       BLOCKED=str(blocked).lower(), FINISHED=str(finished).lower(), REPLAY_RELEASE_TIMEOUT_SECONDS='0',
+                       REPLAY_ERROR_GRACE_MINUTES='0', REPLAY_CHECK_INTERVAL='0', REPLAY_RELEASE_CHECK_INTERVAL='0.01')
             env.pop('SPEEDCTL_CONFIG', None)
             result = subprocess.run(['bash', str(scripts / 'run-cloud-load.sh'), 'staging-decoy'],
                                     env=env, capture_output=True, text=True, timeout=15)
-            launches = [json.loads(line) for line in calls.read_text().splitlines()]
+            launches = [json.loads(line) for line in calls.read_text().splitlines()] if calls.exists() else []
             summary = (quality / 'cloud-load-reports/staging-decoy/summary.md').read_text()
             reports = list((quality / 'cloud-load-reports').glob('**/report.json'))
             return result, launches, summary, len(reports)
@@ -82,6 +87,28 @@ else:
         self.assertEqual(len(launches), 3)
         self.assertEqual(reports, 3)
         self.assertEqual(summary.count('| FAIL |'), 3)
+
+    def test_analysis_overlaps_without_skipping_verdicts(self):
+        result, launches, summary, reports = self.run_cloud('Passed', pipeline=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(len(launches), 3)
+        self.assertEqual(reports, 3)
+        self.assertEqual(summary.count('| PASS |'), 3)
+        self.assertIn('Analyzing', result.stdout)
+        self.assertIn('workload restored and replay pods gone', result.stdout)
+
+    def test_finished_lifecycle_can_release_before_status_changes(self):
+        result, launches, summary, _ = self.run_cloud('Passed', pipeline=True, finished=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(len(launches), 3)
+        self.assertIn('Testing', result.stdout)
+        self.assertEqual(summary.count('| PASS |'), 3)
+
+    def test_missing_restoration_stops_remaining_traffic(self):
+        result, launches, summary, _ = self.run_cloud('Passed', blocked=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(len(launches), 0)
+        self.assertIn('previous replay workloads have not been restored', result.stderr)
 
     def test_terminal_errors_fail(self):
         result, launches, _, reports = self.run_cloud('Error')

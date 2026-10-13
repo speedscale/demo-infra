@@ -246,6 +246,20 @@ wait_for_replay() {
       report_status=$(echo "$report" | jq -r '.report.status // "unknown"' 2>/dev/null || echo "unknown")
       norm=$(echo "$report_status" | tr '[:lower:]' '[:upper:]' | tr ' ' '_')
       info "  $name: $report_status (${elapsed}s elapsed)"
+      if [ -n "${REPLAY_RELEASE_FILE:-}" ] && [ ! -f "$REPLAY_RELEASE_FILE" ]; then
+        report_finished=false
+        if jq -e 'any(.report.lifecycleEvents[]?;
+          .component == "operator" and .beat == "finished" and .state == "RLS_COMPLETED")' <<< "$report" >/dev/null; then
+          report_finished=true
+        fi
+        case "$norm" in
+          ANALYZING|PASSED|MISSED_GOALS|ERROR|CANCELED|CANCELLED) report_finished=true ;;
+        esac
+        if [ "$report_finished" = true ] && "$SCRIPT_DIR/check-replay-released.sh" "$namespace" "$workload"; then
+          info "  $name: workload restored and replay pods gone; analysis may overlap the next test"
+          touch "$REPLAY_RELEASE_FILE"
+        fi
+      fi
       if [ -n "$CLOUD_LOAD_PROFILE" ] && jq -e '.report.status | type == "string"' <<< "$report" >/dev/null 2>&1; then
         printf '%s\n' "$report" > "$CLOUD_REPORT_DIR/report.json"
         kubectl -n "$namespace" get trafficreplays -o json 2>/dev/null \
@@ -417,6 +431,20 @@ for f in "${replay_files[@]}"; do
     fi
   else
     replay_statuses["$name"]="failed"
+  fi
+  if [ -n "${REPLAY_RELEASE_FILE:-}" ] && [ ! -f "$REPLAY_RELEASE_FILE" ]; then
+    release_start=$(date +%s)
+    release_confirmed=true
+    while ! "$SCRIPT_DIR/check-replay-released.sh" "$namespace" "$workload"; do
+      if [ $(( $(date +%s) - release_start )) -ge "${REPLAY_RELEASE_TIMEOUT_SECONDS:-300}" ]; then
+        error "  $name: workload restoration not confirmed; remaining traffic must stop"
+        replay_statuses["$name"]="failed"
+        release_confirmed=false
+        break
+      fi
+      sleep "${REPLAY_CHECK_INTERVAL:-10}"
+    done
+    if [ "$release_confirmed" = true ]; then touch "$REPLAY_RELEASE_FILE"; fi
   fi
 done
 

@@ -1,0 +1,75 @@
+name: Cluster quality
+
+on:
+  workflow_call:
+    inputs:
+      cluster:
+        type: string
+        required: true
+      cloud_load_only:
+        type: boolean
+        default: false
+    secrets:
+      DIGITALOCEAN_ACCESS_TOKEN:
+        required: true
+      SPEEDCTL_DEV_CONFIG:
+        required: true
+      SPEEDCTL_STAGING_CONFIG:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  cluster:
+    name: Quality (${{ inputs.cluster }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Install speedctl
+        timeout-minutes: 5
+        run: ./quality/scripts/install-latest-tool.sh speedctl
+      - name: Install proxymock
+        if: '!inputs.cloud_load_only'
+        timeout-minutes: 5
+        run: ./quality/scripts/install-latest-tool.sh proxymock
+      - name: Configure tenant
+        env:
+          CONFIG_DATA: ${{ inputs.cluster == 'dev-decoy' && secrets.SPEEDCTL_DEV_CONFIG || secrets.SPEEDCTL_STAGING_CONFIG }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/speedctl"
+          printf '%s\n' "$CONFIG_DATA" > "$RUNNER_TEMP/speedctl/config.yaml"
+      - name: Run CD replays
+        if: '!inputs.cloud_load_only'
+        timeout-minutes: 90
+        env:
+          SPEEDCTL_HOME: ${{ runner.temp }}/speedctl
+          SPEEDSCALE_HOME: ${{ runner.temp }}/speedctl
+        run: ./quality/scripts/run-replay.sh ${{ inputs.cluster }}
+      - name: Run Cloud and proxymock load
+        if: '!cancelled()'
+        timeout-minutes: 75
+        env:
+          SPEEDCTL_HOME: ${{ runner.temp }}/speedctl
+          SPEEDSCALE_HOME: ${{ runner.temp }}/speedctl
+          RUN_PROXYMOCK_LOAD: ${{ !inputs.cloud_load_only }}
+        run: ./quality/scripts/run-cloud-load.sh ${{ inputs.cluster }}
+      - name: Upload Cloud reports and logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cloud-load-${{ inputs.cluster }}
+          path: quality/cloud-load-reports/${{ inputs.cluster }}/
+          if-no-files-found: ignore
+      - name: Upload proxymock load reports
+        if: always() && !inputs.cloud_load_only
+        uses: actions/upload-artifact@v7
+        with:
+          name: load-${{ inputs.cluster }}
+          path: quality/proxymock-reports/${{ inputs.cluster }}/load/
+          if-no-files-found: ignore
