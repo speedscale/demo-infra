@@ -247,14 +247,18 @@ wait_for_replay() {
       norm=$(echo "$report_status" | tr '[:lower:]' '[:upper:]' | tr ' ' '_')
       info "  $name: $report_status (${elapsed}s elapsed)"
       if [ -n "${REPLAY_RELEASE_FILE:-}" ] && [ ! -f "$REPLAY_RELEASE_FILE" ]; then
+        report_finished=false
+        if jq -e 'any(.report.lifecycleEvents[]?;
+          .component == "operator" and .beat == "finished" and .state == "RLS_COMPLETED")' <<< "$report" >/dev/null; then
+          report_finished=true
+        fi
         case "$norm" in
-          ANALYZING|PASSED|MISSED_GOALS|ERROR|CANCELED|CANCELLED)
-            if "$SCRIPT_DIR/check-replay-released.sh" "$namespace" "$workload"; then
-              info "  $name: workload restored and replay pods gone; analysis may overlap the next test"
-              touch "$REPLAY_RELEASE_FILE"
-            fi
-            ;;
+          ANALYZING|PASSED|MISSED_GOALS|ERROR|CANCELED|CANCELLED) report_finished=true ;;
         esac
+        if [ "$report_finished" = true ] && "$SCRIPT_DIR/check-replay-released.sh" "$namespace" "$workload"; then
+          info "  $name: workload restored and replay pods gone; analysis may overlap the next test"
+          touch "$REPLAY_RELEASE_FILE"
+        fi
       fi
       if [ -n "$CLOUD_LOAD_PROFILE" ] && jq -e '.report.status | type == "string"' <<< "$report" >/dev/null 2>&1; then
         printf '%s\n' "$report" > "$CLOUD_REPORT_DIR/report.json"

@@ -11,7 +11,7 @@ QUALITY = Path(__file__).resolve().parents[1]
 
 
 class CloudLoadTest(unittest.TestCase):
-    def run_cloud(self, status, pipeline=False, blocked=False):
+    def run_cloud(self, status, pipeline=False, blocked=False, finished=False):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             quality = root / 'quality'
@@ -43,9 +43,9 @@ elif a[:2] == ['get','snapshot']:
 elif a[:2] == ['get','report']:
     status=os.environ['REPORT_STATUS']
     if os.environ['PIPELINE'] == 'true' and len(Path(os.environ['CALLS']).read_text().splitlines()) < 3:
-        status='Analyzing'
+        status='Testing' if os.environ['FINISHED'] == 'true' else 'Analyzing'
         time.sleep(0.02)
-    print(json.dumps({'report':{'status':status}}))
+    print(json.dumps({'report':{'status':status, 'lifecycleEvents':[{'component':'operator','beat':'finished','state':'RLS_COMPLETED'}] if os.environ['FINISHED'] == 'true' else []}}))
 else:
     print('{}')
 ''')
@@ -54,7 +54,7 @@ else:
             env = dict(os.environ, PATH=str(root)+os.pathsep+os.environ['PATH'],
                        SPEEDCTL_HOME=str(root / 'speedctl-home'),
                        REPORT_STATUS=status, CALLS=str(calls), PIPELINE=str(pipeline).lower(),
-                       BLOCKED=str(blocked).lower(), REPLAY_RELEASE_TIMEOUT_SECONDS='0',
+                       BLOCKED=str(blocked).lower(), FINISHED=str(finished).lower(), REPLAY_RELEASE_TIMEOUT_SECONDS='0',
                        REPLAY_ERROR_GRACE_MINUTES='0', REPLAY_CHECK_INTERVAL='0', REPLAY_RELEASE_CHECK_INTERVAL='0.01')
             env.pop('SPEEDCTL_CONFIG', None)
             result = subprocess.run(['bash', str(scripts / 'run-cloud-load.sh'), 'staging-decoy'],
@@ -96,6 +96,13 @@ else:
         self.assertEqual(summary.count('| PASS |'), 3)
         self.assertIn('Analyzing', result.stdout)
         self.assertIn('workload restored and replay pods gone', result.stdout)
+
+    def test_finished_lifecycle_can_release_before_status_changes(self):
+        result, launches, summary, _ = self.run_cloud('Passed', pipeline=True, finished=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(len(launches), 3)
+        self.assertIn('Testing', result.stdout)
+        self.assertEqual(summary.count('| PASS |'), 3)
 
     def test_missing_restoration_stops_remaining_traffic(self):
         result, launches, summary, _ = self.run_cloud('Passed', blocked=True)
