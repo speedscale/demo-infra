@@ -85,3 +85,15 @@ A fixed checkout of the runtime change completed all three full Cloud profiles a
 | AI soak | [2,805 / 297.4](https://dev.speedscale.com/report/2f8ad268-01b4-44c8-9090-d87b87da02d6) | 1,363 / 604.1 |
 
 All Cloud goals passed with 100% response assertions and zero failed transactions; gateway and AI also had zero mock misses. All proxymock delivery and latency gates passed. Generator lifecycle timestamps confirmed no overlap between the three Cloud traffic intervals, and the final Cloud release preceded proxymock traffic. All 37 runner tests and actionlint passed.
+
+## Cloud low-data validation
+
+The three full dev Cloud profiles passed with generator and responder low-data mode confirmed in their actual configurations. Each report recorded zero raw request/response bytes. Events and application/component logs remain collected; gateway still produced 268 MB of events, so low-data mode does not eliminate all report-processing costs. Both tenants received the isolated profile configurations, and readback confirmed both low-data flags. The existing dev and staging regression configs remained in full-data mode with their response assertions.
+
+| Profile | Transactions | p95 ms | Report |
+| --- | ---: | ---: | --- |
+| Gateway ramp | 21,684 | 98.4 | [Report](https://dev.speedscale.com/report/8d1cde5d-41a9-4ed4-bd98-4ac82d55037a) |
+| Fraud spike | 22,997 | 88.5 | [Report](https://dev.speedscale.com/report/0b7829ac-7f7e-4b07-829c-93c54bab80ea) |
+| AI soak | 3,111 | 265.3 | [Report](https://dev.speedscale.com/report/d7f32f5e-2a2d-427f-a65e-f155865a9e74) |
+
+All delivered-request/failure/latency checks passed. Gateway and AI had zero mock misses and passed mock utilization. A temporary dev HTTP fixture supplied a healthy control, HTTP500 responses, and 200 ms responses against a 50 ms p95 ceiling. The healthy control passed with complete grouped evidence; both injected failures produced Error reports. The fixture namespace and synthetic signing key were removed. All 43 runner tests and CI passed, including missing-evidence rejection, gRPC failure/result-code/latency checks, and full-data regression separation. Full staging execution still needs a fresh daily run after merge.
