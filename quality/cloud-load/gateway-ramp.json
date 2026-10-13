@@ -1,38 +1,76 @@
 {
+  "id": "banking-cloud-load-gateway-ramp",
   "generator": {
-    "stages": [
+    "dlpConfigId": "banking-app-keys",
+    "evaluationIntervals": 5,
+    "lowDataMode": true,
+    "loadGroups": [
       {
-        "duration": "30s",
-        "virtualUsers": {
-          "virtualUsers": "1",
-          "requestDelay": {}
-        }
-      },
-      {
-        "duration": "60s",
-        "virtualUsers": {
-          "virtualUsers": "5",
-          "requestDelay": {}
+        "id": "gateway-ramp",
+        "name": "gateway-ramp",
+        "selection": "LOAD_SELECTION_REQUESTS",
+        "stages": [
+          {
+            "duration": "30s",
+            "virtualUsers": {
+              "virtualUsers": "1",
+              "requestDelay": {}
+            }
+          },
+          {
+            "duration": "60s",
+            "virtualUsers": {
+              "virtualUsers": "5",
+              "requestDelay": {}
+            },
+            "rampFor": "30s"
+          },
+          {
+            "duration": "90s",
+            "virtualUsers": {
+              "virtualUsers": "10",
+              "requestDelay": {}
+            },
+            "rampFor": "30s"
+          },
+          {
+            "duration": "60s",
+            "virtualUsers": {
+              "virtualUsers": "2",
+              "requestDelay": {}
+            }
+          }
+        ],
+        "scope": {
+          "operator": "AND",
+          "conditions": [
+            {
+              "operator": "AND",
+              "filters": [
+                {
+                  "include": true,
+                  "operator": "EQUAL",
+                  "detected_status": "200"
+                }
+              ]
+            }
+          ]
         },
-        "rampFor": "30s"
-      },
-      {
-        "duration": "90s",
-        "virtualUsers": {
-          "virtualUsers": "10",
-          "requestDelay": {}
-        },
-        "rampFor": "30s"
-      },
-      {
-        "duration": "60s",
-        "virtualUsers": {
-          "virtualUsers": "2",
-          "requestDelay": {}
-        }
+        "goals": [
+          {
+            "id": "p95",
+            "minSamples": "1",
+            "rule": {
+              "metricName": "p95Latency",
+              "type": "TOO_HIGH",
+              "value": 1500,
+              "action": "ALERT"
+            }
+          }
+        ]
       }
     ],
-    "evaluationIntervals": 5
+    "loadUnmatchedPolicy": "LOAD_UNMATCHED_EXCLUDE"
   },
   "rules": [
     {
@@ -53,5 +91,42 @@
       "value": 1,
       "action": "ALERT"
     }
-  ]
+  ],
+  "version": 3,
+  "assertionGroups": [],
+  "responder": {
+    "numReplicas": 1,
+    "responseDelay": {
+      "mode": "NONE"
+    },
+    "dlpConfigId": "banking-app-keys",
+    "lowDataMode": true
+  },
+  "cluster": {
+    "cleanup": "inventory",
+    "replayMode": "full-replay",
+    "sidecarTlsOut": true,
+    "logLevel": "info",
+    "logsCollected": true,
+    "generatorResources": {
+      "limits": {
+        "cpu": "1",
+        "memory": "2147483648"
+      },
+      "requests": {
+        "cpu": "100m",
+        "memory": "134217728"
+      }
+    },
+    "responderResources": {
+      "limits": {
+        "cpu": "500m",
+        "memory": "1073741824"
+      },
+      "requests": {
+        "cpu": "100m",
+        "memory": "134217728"
+      }
+    }
+  }
 }

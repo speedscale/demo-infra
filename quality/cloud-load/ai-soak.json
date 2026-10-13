@@ -1,16 +1,54 @@
 {
+  "id": "banking-cloud-load-ai-soak",
   "generator": {
-    "stages": [
+    "dlpConfigId": "banking-app-keys",
+    "evaluationIntervals": 5,
+    "lowDataMode": true,
+    "requestTimeoutSeconds": 40,
+    "loadGroups": [
       {
-        "duration": "300s",
-        "virtualUsers": {
-          "virtualUsers": "2",
-          "requestDelay": {}
-        }
+        "id": "ai-soak",
+        "name": "ai-soak",
+        "selection": "LOAD_SELECTION_REQUESTS",
+        "stages": [
+          {
+            "duration": "300s",
+            "virtualUsers": {
+              "virtualUsers": "2",
+              "requestDelay": {}
+            }
+          }
+        ],
+        "scope": {
+          "operator": "AND",
+          "conditions": [
+            {
+              "operator": "AND",
+              "filters": [
+                {
+                  "include": true,
+                  "operator": "EQUAL",
+                  "detected_status": "200"
+                }
+              ]
+            }
+          ]
+        },
+        "goals": [
+          {
+            "id": "p95",
+            "minSamples": "1",
+            "rule": {
+              "metricName": "p95Latency",
+              "type": "TOO_HIGH",
+              "value": 2000,
+              "action": "ALERT"
+            }
+          }
+        ]
       }
     ],
-    "evaluationIntervals": 5,
-    "requestTimeoutSeconds": 40
+    "loadUnmatchedPolicy": "LOAD_UNMATCHED_EXCLUDE"
   },
   "rules": [
     {
@@ -31,5 +69,42 @@
       "value": 1,
       "action": "ALERT"
     }
-  ]
+  ],
+  "version": 3,
+  "assertionGroups": [],
+  "responder": {
+    "numReplicas": 1,
+    "responseDelay": {
+      "mode": "NONE"
+    },
+    "dlpConfigId": "banking-app-keys",
+    "lowDataMode": true
+  },
+  "cluster": {
+    "cleanup": "inventory",
+    "replayMode": "full-replay",
+    "sidecarTlsOut": true,
+    "logLevel": "info",
+    "logsCollected": true,
+    "generatorResources": {
+      "limits": {
+        "cpu": "1",
+        "memory": "2147483648"
+      },
+      "requests": {
+        "cpu": "100m",
+        "memory": "134217728"
+      }
+    },
+    "responderResources": {
+      "limits": {
+        "cpu": "500m",
+        "memory": "1073741824"
+      },
+      "requests": {
+        "cpu": "100m",
+        "memory": "134217728"
+      }
+    }
+  }
 }

@@ -17,7 +17,7 @@ class CloudLoadTest(unittest.TestCase):
             quality = root / 'quality'
             scripts = quality / 'scripts'
             scripts.mkdir(parents=True)
-            for name in ('run-replay.sh', 'run-cloud-load.sh', 'check-replay-released.sh'):
+            for name in ('run-replay.sh', 'run-cloud-load.sh', 'check-replay-released.sh', 'validate-cloud-load-report.py'):
                 shutil.copy(QUALITY / 'scripts' / name, scripts)
             for name in ('connect-cluster.sh', 'check-speedscale-certs.sh'):
                 p = scripts / name
@@ -35,17 +35,28 @@ from pathlib import Path
 a=sys.argv[1:]
 if a[:2] == ['infra','replay']:
     with open(os.environ['CALLS'],'a') as f: f.write(json.dumps(a)+'\\n')
-    print('11111111-2222-3333-4444-555555555555')
+    count=len(Path(os.environ['CALLS']).read_text().splitlines())
+    print('11111111-2222-3333-4444-'+format(count,'012d'))
 elif a[:2] == ['get','test-config']:
-    print(json.dumps({'generator':{'dlpConfigId':'banking-app-keys'},'responder':{'dlpConfigId':'banking-app-keys'}}))
+    profile=a[2].removeprefix('banking-cloud-load-')
+    print((Path(os.environ['CFG_DIR'])/(profile+'.json')).read_text())
 elif a[:2] == ['get','snapshot']:
     print(json.dumps({'tokenConfigId':'banking-jwt-resign','tokenizerConfig':{'id':'banking-jwt-resign','generator':[{'transforms':[{'type':'jwt_resign'}]}],'generatorExpectedEnvironment':{'secrets':['fixture']}},'outTraffic':[]}))
+elif a[:3] == ['get','report','latencytable']:
+    print(json.dumps({'total':{'count':100,'p95':20}}))
 elif a[:2] == ['get','report']:
     status=os.environ['REPORT_STATUS']
     if os.environ['PIPELINE'] == 'true' and len(Path(os.environ['CALLS']).read_text().splitlines()) < 3:
         status='Testing' if os.environ['FINISHED'] == 'true' else 'Analyzing'
         time.sleep(0.02)
-    print(json.dumps({'report':{'status':status, 'lifecycleEvents':[{'component':'operator','beat':'finished','state':'RLS_COMPLETED'}] if os.environ['FINISHED'] == 'true' else []}}))
+    index=int(a[2].split('-')[-1])-1
+    launch=json.loads(Path(os.environ['CALLS']).read_text().splitlines()[index])
+    profile=launch[launch.index('--test-config-id')+1].removeprefix('banking-cloud-load-')
+    config=json.loads((Path(os.environ['CFG_DIR'])/(profile+'.json')).read_text())
+    tags={'load_group_id':profile}
+    goals=[{'command':'load_run','status':'PASS'}]+[{'command':c,'status':'PASS','tags':tags} for c in ['load_requests','load_delivery']]
+    goals.append({'command':'p95Latency','status':'PASS','tags':dict(tags,load_goal_id='p95')})
+    print(json.dumps({'report':{'status':status, 'actualConfig':config, 'goals':goals, 'lifecycleEvents':[{'component':'operator','beat':'finished','state':'RLS_COMPLETED'}] if os.environ['FINISHED'] == 'true' else []}}))
 else:
     print('{}')
 ''')
@@ -53,7 +64,7 @@ else:
             calls = root / 'calls.jsonl'
             env = dict(os.environ, PATH=str(root)+os.pathsep+os.environ['PATH'],
                        SPEEDCTL_HOME=str(root / 'speedctl-home'),
-                       REPORT_STATUS=status, CALLS=str(calls), PIPELINE=str(pipeline).lower(),
+                       REPORT_STATUS=status, CALLS=str(calls), CFG_DIR=str(quality / 'cloud-load'), PIPELINE=str(pipeline).lower(),
                        BLOCKED=str(blocked).lower(), FINISHED=str(finished).lower(), REPLAY_RELEASE_TIMEOUT_SECONDS='0',
                        REPLAY_ERROR_GRACE_MINUTES='0', REPLAY_CHECK_INTERVAL='0', REPLAY_RELEASE_CHECK_INTERVAL='0.01')
             env.pop('SPEEDCTL_CONFIG', None)
@@ -71,8 +82,8 @@ else:
         self.assertEqual(reports, 3)
         for args, profile in zip(launches, ('gateway-ramp','fraud-spike','ai-soak')):
             self.assertEqual(args[args.index('--cluster')+1], 'staging-decoy')
-            override = json.loads(args[args.index('--test-override')+1])
-            self.assertEqual(override, json.loads((QUALITY / 'cloud-load' / (profile+'.json')).read_text()))
+            self.assertNotIn('--test-override', args)
+            self.assertEqual(args[args.index('--test-config-id')+1], 'banking-cloud-load-'+profile)
             self.assertNotIn('--no-mocks', args)
             if profile in ('gateway-ramp', 'ai-soak'):
                 expected = {'gateway-ramp': '4f2b0637-f69d-4787-8f11-24cecc812cb2',

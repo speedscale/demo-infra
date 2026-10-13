@@ -1,5 +1,9 @@
 {
+  "id": "banking-cloud-load-fraud-spike",
   "generator": {
+    "dlpConfigId": "banking-app-keys",
+    "evaluationIntervals": 5,
+    "lowDataMode": true,
     "stages": [
       {
         "duration": "30s",
@@ -23,8 +27,7 @@
           "requestDelay": {}
         }
       }
-    ],
-    "evaluationIntervals": 5
+    ]
   },
   "rules": [
     {
@@ -45,5 +48,42 @@
       "value": 1,
       "action": "ALERT"
     }
-  ]
+  ],
+  "version": 3,
+  "assertionGroups": [],
+  "responder": {
+    "numReplicas": 1,
+    "responseDelay": {
+      "mode": "NONE"
+    },
+    "dlpConfigId": "banking-app-keys",
+    "lowDataMode": true
+  },
+  "cluster": {
+    "cleanup": "inventory",
+    "replayMode": "full-replay",
+    "sidecarTlsOut": true,
+    "logLevel": "info",
+    "logsCollected": true,
+    "generatorResources": {
+      "limits": {
+        "cpu": "1",
+        "memory": "2147483648"
+      },
+      "requests": {
+        "cpu": "100m",
+        "memory": "134217728"
+      }
+    },
+    "responderResources": {
+      "limits": {
+        "cpu": "500m",
+        "memory": "1073741824"
+      },
+      "requests": {
+        "cpu": "100m",
+        "memory": "134217728"
+      }
+    }
+  }
 }

@@ -13,7 +13,6 @@ if [ -n "$CLOUD_LOAD_PROFILE" ]; then
     gateway-ramp:banking-gateway|fraud-spike:banking-fraud|ai-soak:banking-ai) ;;
     *) echo "Unsupported Cloud load profile/service" >&2; exit 1 ;;
   esac
-  replay_override_args=(--test-override "$(jq -c . "$REPO_ROOT/quality/cloud-load/$CLOUD_LOAD_PROFILE.json")")
   CLOUD_REPORT_DIR="${CLOUD_REPORT_DIR:-$REPO_ROOT/quality/cloud-load-reports/$CLUSTER_NAME/$CLOUD_LOAD_PROFILE}"
   mkdir -p "$CLOUD_REPORT_DIR"
   rm -f "$CLOUD_REPORT_DIR/report.json" "$CLOUD_REPORT_DIR/report-id.txt"
@@ -31,6 +30,11 @@ fi
 REPLAY_DIR="$REPO_ROOT/quality/speedctl-replay"
 DLP_CONFIG_ID="banking-app-keys"
 TEST_CONFIG_ID="banking-daily-replay"
+TEST_CONFIG_FILE="$REPO_ROOT/quality/test-configs/$TEST_CONFIG_ID.json"
+if [ -n "$CLOUD_LOAD_PROFILE" ]; then
+  TEST_CONFIG_FILE="$REPO_ROOT/quality/cloud-load/$CLOUD_LOAD_PROFILE.json"
+  TEST_CONFIG_ID=$(jq -er .id "$TEST_CONFIG_FILE")
+fi
 JWT_TRANSFORM_ID="banking-jwt-resign"
 JWT_TRANSFORM_FILE="$REPO_ROOT/quality/transforms/${JWT_TRANSFORM_ID}.json"
 SYNC_SPEEDSCALE_ARTIFACTS="${SYNC_SPEEDSCALE_ARTIFACTS:-false}"
@@ -88,6 +92,13 @@ require_test_config() {
   fi
 
   if [ -n "$CLOUD_LOAD_PROFILE" ]; then cp "$current" "$CLOUD_REPORT_DIR/base-test-config.json"; fi
+  if [ -z "$CLOUD_LOAD_PROFILE" ] && ! jq -e '
+    (.generator.lowDataMode // false) == false and (.responder.lowDataMode // false) == false
+  ' "$current" >/dev/null; then
+    rm -f "$current"
+    error "Regression test config must keep generator and responder in full data mode"
+    return 1
+  fi
   rm -f "$current"
 }
 
@@ -109,7 +120,7 @@ if sync_enabled; then
   speedctl_cmd put transform "$JWT_TRANSFORM_FILE"
 
   info "Syncing daily replay test config"
-  speedctl_cmd put test-config "$REPO_ROOT/quality/test-configs/banking-daily-replay.json"
+  speedctl_cmd put test-config "$TEST_CONFIG_FILE"
 else
   info "Validating banking replay artifacts"
   require_cloud_artifact dlp-config "$DLP_CONFIG_ID"
@@ -341,6 +352,7 @@ for f in "${replay_files[@]}"; do
   dev_snapshot_id=$(get_config_value "$f" "devSnapshotID")
   staging_snapshot_id=$(get_config_value "$f" "stagingSnapshotID")
   test_config_id=$(get_config_value "$f" "testConfigID")
+  if [ -n "$CLOUD_LOAD_PROFILE" ]; then test_config_id="$TEST_CONFIG_ID"; fi
   run_id="${GITHUB_RUN_ID:-local}"
   run_attempt="${GITHUB_RUN_ATTEMPT:-1}"
   cluster_tag="${CLUSTER_NAME%-decoy}"
@@ -424,7 +436,16 @@ for f in "${replay_files[@]}"; do
   replay_statuses["$name"]="running"
 
   if wait_for_replay "$name" "$report_id"; then
-    if check_mock_utilization "$name" "$report_id" "$snapshot_id"; then
+    cloud_validation_args=()
+    if [ -n "$CLOUD_LOAD_PROFILE" ] && jq -e '.generator.stages | length > 0' "$TEST_CONFIG_FILE" >/dev/null; then
+      if ! speedctl_cmd get report latencytable "$report_id" > "$CLOUD_REPORT_DIR/latency-table.json"; then
+        echo '{}' > "$CLOUD_REPORT_DIR/latency-table.json"
+      fi
+      cloud_validation_args=("$CLOUD_REPORT_DIR/latency-table.json")
+    fi
+    if [ -n "$CLOUD_LOAD_PROFILE" ] && ! python3 "$SCRIPT_DIR/validate-cloud-load-report.py" "$CLOUD_REPORT_DIR/report.json" "$TEST_CONFIG_FILE" "${cloud_validation_args[@]}"; then
+      replay_statuses["$name"]="failed"
+    elif check_mock_utilization "$name" "$report_id" "$snapshot_id"; then
       replay_statuses["$name"]="completed"
     else
       replay_statuses["$name"]="failed"

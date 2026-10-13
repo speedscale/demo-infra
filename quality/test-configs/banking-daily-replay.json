@@ -10,7 +10,8 @@
       }
     ],
     "dlpConfigId": "banking-app-keys",
-    "evaluationIntervals": 5
+    "evaluationIntervals": 5,
+    "lowDataMode": false
   },
   "rules": [
     {
@@ -41,7 +42,8 @@
     "responseDelay": {
       "mode": "NONE"
     },
-    "dlpConfigId": "banking-app-keys"
+    "dlpConfigId": "banking-app-keys",
+    "lowDataMode": false
   },
   "cluster": {
     "cleanup": "inventory",
