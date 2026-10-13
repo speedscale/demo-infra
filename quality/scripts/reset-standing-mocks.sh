@@ -23,6 +23,7 @@ fi
 DELETE_TIMEOUT=${MOCK_DELETE_TIMEOUT:-300}
 READY_TIMEOUT=${MOCK_READY_TIMEOUT:-600}
 ROLLOUT_TIMEOUT=${MOCK_ROLLOUT_TIMEOUT:-300}
+STATUS_REQUEST_TIMEOUT=${MOCK_STATUS_REQUEST_TIMEOUT:-10s}
 
 info()  { echo -e "\033[36m$*\033[0m"; }
 warn()  { echo -e "\033[33m$*\033[0m"; }
@@ -81,14 +82,22 @@ kubectl -n "$NS" delete trafficreplay "${trs[@]}" --wait --timeout="${DELETE_TIM
 info "Waiting for the operator to remove responder and redis inventory"
 deadline=$(( $(date +%s) + DELETE_TIMEOUT ))
 while true; do
-  remaining=$(kubectl -n "$NS" get deploy -l 'replay.speedscale.com/env-id' -o json \
-    | jq -r '[.items[] | select(.metadata.name | test("^speedscale-(responder|redis)-")) | .metadata.name] | length')
-  if [ "$remaining" -eq 0 ]; then
-    break
+  if inventory=$(kubectl --request-timeout="$STATUS_REQUEST_TIMEOUT" -n "$NS" get deploy -l 'replay.speedscale.com/env-id' -o json) \
+      && remaining=$(jq -er '
+        if (.items | type) != "array" then error("Invalid deployment list") else
+          [.items[] | select(.metadata.name | test("^speedscale-(responder|redis)-"))] | length
+        end
+      ' <<< "$inventory"); then
+    if [ "$remaining" -eq 0 ]; then
+      break
+    fi
+    info "  $remaining inventory deployment(s) remain"
+  else
+    warn "  Unable to read mock inventory; retrying within ${DELETE_TIMEOUT}s cleanup budget"
   fi
   if [ "$(date +%s)" -ge "$deadline" ]; then
     error "Inventory still present after ${DELETE_TIMEOUT}s:"
-    kubectl -n "$NS" get deploy -l 'replay.speedscale.com/env-id' | grep -E 'speedscale-(responder|redis)-' || true
+    kubectl --request-timeout="$STATUS_REQUEST_TIMEOUT" -n "$NS" get deploy -l 'replay.speedscale.com/env-id' | grep -E 'speedscale-(responder|redis)-' || true
     exit 1
   fi
   sleep 5
@@ -129,23 +138,35 @@ for tr in "${trs[@]}"; do
 done
 
 info "Waiting for Running and MocksReady"
-deadline=$(( $(date +%s) + READY_TIMEOUT ))
+started=$(date +%s)
+deadline=$(( started + READY_TIMEOUT ))
+tr_names=$(printf '%s\n' "${trs[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')
 while true; do
   ready=0
-  for tr in "${trs[@]}"; do
-    conds=$(kubectl -n "$NS" get trafficreplay "$tr" -o json 2>/dev/null \
-      | jq -r '[.status.conditions[]? | select(.status == "True") | .type] | join("+")')
-    case "$conds" in
-      *Running*MocksReady*|*MocksReady*Running*) ready=$((ready + 1)) ;;
-    esac
-  done
-  info "  $ready/${#trs[@]} ready"
+  # A failed status read must not abort provisioning or count as readiness.
+  if statuses=$(kubectl --request-timeout="$STATUS_REQUEST_TIMEOUT" -n "$NS" get trafficreplays -o json) \
+      && ready=$(jq -er --argjson names "$tr_names" '
+        if (.items | type) != "array" then error("Invalid TrafficReplay list") else
+          [.items[]
+           | select(.metadata.name as $name | $names | index($name) != null)
+           | select(any(.status.conditions[]?; .type == "Running" and .status == "True")
+                    and any(.status.conditions[]?; .type == "MocksReady" and .status == "True"))]
+          | length
+        end
+      ' <<< "$statuses"); then
+    :
+  else
+    ready=0
+    warn "  Unable to read mock readiness; retrying within ${READY_TIMEOUT}s readiness budget"
+  fi
+  elapsed=$(( $(date +%s) - started ))
+  info "  $ready/${#trs[@]} ready (${elapsed}s/${READY_TIMEOUT}s elapsed)"
   if [ "$ready" -eq ${#trs[@]} ]; then
     break
   fi
   if [ "$(date +%s)" -ge "$deadline" ]; then
     error "Only $ready/${#trs[@]} TrafficReplays reached Running+MocksReady after ${READY_TIMEOUT}s"
-    kubectl -n "$NS" get trafficreplays
+    kubectl --request-timeout="$STATUS_REQUEST_TIMEOUT" -n "$NS" get trafficreplays || true
     exit 1
   fi
   sleep 10
