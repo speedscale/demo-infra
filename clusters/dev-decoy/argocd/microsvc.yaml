@@ -22,12 +22,12 @@ spec:
             metadata:
               name: banking-gateway
               annotations:
-                capture.speedscale.com/java-agent-tag: v0.1.89
+                capture.speedscale.com/java-agent-tag: v0.1.90
             spec:
               template:
                 metadata:
                   annotations:
-                    capture.speedscale.com/java-agent-tag: v0.1.89
+                    capture.speedscale.com/java-agent-tag: v0.1.90
         - target:
             kind: Deployment
             name: banking-accounts
@@ -37,12 +37,12 @@ spec:
             metadata:
               name: banking-accounts
               annotations:
-                capture.speedscale.com/java-agent-tag: v0.1.89
+                capture.speedscale.com/java-agent-tag: v0.1.90
             spec:
               template:
                 metadata:
                   annotations:
-                    capture.speedscale.com/java-agent-tag: v0.1.89
+                    capture.speedscale.com/java-agent-tag: v0.1.90
         - target:
             kind: Deployment
             name: banking-transactions
@@ -52,12 +52,12 @@ spec:
             metadata:
               name: banking-transactions
               annotations:
-                capture.speedscale.com/java-agent-tag: v0.1.89
+                capture.speedscale.com/java-agent-tag: v0.1.90
             spec:
               template:
                 metadata:
                   annotations:
-                    capture.speedscale.com/java-agent-tag: v0.1.89
+                    capture.speedscale.com/java-agent-tag: v0.1.90
   destination:
     server: https://kubernetes.default.svc
     namespace: banking-app
