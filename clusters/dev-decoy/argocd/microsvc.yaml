@@ -38,11 +38,13 @@ spec:
               name: banking-accounts
               annotations:
                 capture.speedscale.com/java-agent-tag: v0.1.90
+                capture.speedscale.com/ignore-ports: ""
             spec:
               template:
                 metadata:
                   annotations:
                     capture.speedscale.com/java-agent-tag: v0.1.90
+                    capture.speedscale.com/ignore-ports: ""
         - target:
             kind: Deployment
             name: banking-transactions
@@ -53,11 +55,28 @@ spec:
               name: banking-transactions
               annotations:
                 capture.speedscale.com/java-agent-tag: v0.1.90
+                capture.speedscale.com/ignore-ports: ""
             spec:
               template:
                 metadata:
                   annotations:
                     capture.speedscale.com/java-agent-tag: v0.1.90
+                    capture.speedscale.com/ignore-ports: ""
+        - target:
+            kind: Deployment
+            name: banking-user
+          patch: |-
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: banking-user
+              annotations:
+                capture.speedscale.com/ignore-ports: ""
+            spec:
+              template:
+                metadata:
+                  annotations:
+                    capture.speedscale.com/ignore-ports: ""
   destination:
     server: https://kubernetes.default.svc
     namespace: banking-app
