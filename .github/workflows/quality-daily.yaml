@@ -33,6 +33,10 @@ jobs:
     outputs:
       should-run: ${{ steps.guard.outputs.should-run }}
     steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+    - name: Test replay outcome reporting
+      run: python3 quality/scripts/test-run-replay-status.py
     - name: Check scheduled SHA
       id: guard
       env:
@@ -140,7 +144,8 @@ jobs:
       with:
         name: proxymock-ci-${{ matrix.replay }}
         path: quality/proxymock-reports/dev-decoy/${{ matrix.replay }}.json
-        if-no-files-found: ignore
+        if-no-files-found: error
+        retention-days: 90
 
   quality-dev:
     name: Dev cluster quality

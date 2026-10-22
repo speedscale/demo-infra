@@ -257,6 +257,8 @@ wait_for_replay() {
       report_status=$(echo "$report" | jq -r '.report.status // "unknown"' 2>/dev/null || echo "unknown")
       norm=$(echo "$report_status" | tr '[:lower:]' '[:upper:]' | tr ' ' '_')
       info "  $name: $report_status (${elapsed}s elapsed)"
+      mkdir -p "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME"
+      printf '%s\n' "$report" > "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME/$rid.json"
       if [ -n "${REPLAY_RELEASE_FILE:-}" ] && [ ! -f "$REPLAY_RELEASE_FILE" ]; then
         report_finished=false
         if jq -e 'any(.report.lifecycleEvents[]?;
@@ -281,11 +283,8 @@ wait_for_replay() {
       case "$norm" in
         PASSED) return 0 ;;
         MISSED_GOALS)
-          if [ -n "$CLOUD_LOAD_PROFILE" ]; then
-            error "  $name: Cloud load goals missed"
-            return 1
-          fi
-          return 0
+          error "  $name: replay goals missed"
+          return 1
           ;;
         CANCELED|*CANCEL*)
           error "  $name: terminal status $report_status"
