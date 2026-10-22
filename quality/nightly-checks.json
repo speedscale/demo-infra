@@ -1,0 +1,102 @@
+[
+  {
+    "host": "gitlab",
+    "repo": "speedscale/speedscale",
+    "name": "Nightly Security Scan",
+    "max_age_hours": 28.0,
+    "grace_hours": 4.0,
+    "min_jobs": 36,
+    "project": 24908129,
+    "schedule": 239576,
+    "url": "https://gitlab.com/speedscale/speedscale/-/pipeline_schedules"
+  },
+  {
+    "host": "gitlab",
+    "repo": "speedscale/dashboard",
+    "name": "Dashboard Security Scan",
+    "max_age_hours": 27.0,
+    "grace_hours": 3.0,
+    "min_jobs": 2,
+    "project": 21938258,
+    "schedule": 4258823,
+    "url": "https://gitlab.com/speedscale/dashboard/-/pipeline_schedules"
+  },
+  {
+    "host": "gitlab",
+    "repo": "speedscale/infra/structure",
+    "name": "Infra Scan",
+    "max_age_hours": 25.0,
+    "grace_hours": 1.0,
+    "min_jobs": 2,
+    "project": 24131703,
+    "schedule": 1568314,
+    "url": "https://gitlab.com/speedscale/infra/structure/-/pipeline_schedules"
+  },
+  {
+    "host": "gitlab",
+    "repo": "speedscale/infra/structure",
+    "name": "Tenant Provisioning",
+    "max_age_hours": 2.5,
+    "grace_hours": 1.5,
+    "min_jobs": 1,
+    "project": 24131703,
+    "schedule": 209088,
+    "url": "https://gitlab.com/speedscale/infra/structure/-/pipeline_schedules"
+  },
+  {
+    "host": "gitlab",
+    "repo": "speedscale/kraken",
+    "name": "Kraken Cleanup",
+    "max_age_hours": 26.0,
+    "grace_hours": 2.0,
+    "min_jobs": 3,
+    "project": 23013870,
+    "schedule": 4404287,
+    "url": "https://gitlab.com/speedscale/kraken/-/pipeline_schedules"
+  },
+  {
+    "host": "gitlab",
+    "repo": "speedscale/buildinator",
+    "name": "Rebuild",
+    "max_age_hours": 180.0,
+    "grace_hours": 12.0,
+    "min_jobs": 7,
+    "project": 22796839,
+    "schedule": 244802,
+    "url": "https://gitlab.com/speedscale/buildinator/-/pipeline_schedules"
+  },
+  {
+    "host": "gitlab",
+    "repo": "speedscale/nettap",
+    "name": "Nettap Security Scan",
+    "max_age_hours": 27.0,
+    "grace_hours": 3.0,
+    "min_jobs": 2,
+    "project": 70718967,
+    "schedule": null,
+    "url": "https://gitlab.com/speedscale/nettap/-/pipeline_schedules"
+  },
+  {
+    "host": "github",
+    "repo": "speedscale/demo-infra",
+    "name": "Daily Quality Replays",
+    "max_age_hours": 29.0,
+    "grace_hours": 5.0,
+    "min_jobs": 12,
+    "workflow": "quality-daily.yaml",
+    "url": "https://github.com/speedscale/demo-infra/actions"
+  },
+  {
+    "host": "github",
+    "repo": "speedscale/demo",
+    "name": "Dependency Security",
+    "max_age_hours": 172.0,
+    "grace_hours": 4.0,
+    "min_jobs": 8,
+    "workflow": "dependency-security.yml",
+    "url": "https://github.com/speedscale/demo/actions",
+    "ignore_jobs": [
+      "changes"
+    ]
+  }
+]
