@@ -72,6 +72,7 @@ service=$(get_config_value "$CONFIG_FILE" "service")
 service_port=$(get_config_value "$CONFIG_FILE" "servicePort")
 local_port=$(get_config_value "$CONFIG_FILE" "localPort")
 target=$(get_config_value "$CONFIG_FILE" "proxymockTarget")
+readiness_path=$(get_config_value "$CONFIG_FILE" "proxymockReadinessPath")
 
 case "$CLUSTER_NAME" in
   dev-decoy)
@@ -183,8 +184,8 @@ fi
 auth_port="${PROXYMOCK_AUTH_PORT:-18081}"
 auth_pf_log="$runner_temp/${name}-auth-port-forward.log"
 info "Running Postman auth preflight through $namespace/banking-gateway"
-if ! kubectl -n "$namespace" wait --for=condition=available "deployment/banking-gateway" --timeout=5m; then
-  warn "Deployment $namespace/banking-gateway is not available"
+if ! kubectl -n "$namespace" rollout status "deployment/banking-gateway" --timeout=5m; then
+  warn "Deployment $namespace/banking-gateway rollout did not complete"
   kubectl -n "$namespace" get deployment banking-gateway || true
   exit 1
 fi
@@ -192,13 +193,18 @@ start_service_port_forward "$namespace" banking-gateway "$auth_port" 80 "$auth_p
 "$SCRIPT_DIR/apply-postman-auth-preflight.sh" "$snapshot_dir" "http://localhost:$auth_port"
 
 info "Forwarding $namespace/$service:$service_port to localhost:$local_port"
-if ! kubectl -n "$namespace" wait --for=condition=available "deployment/$service" --timeout=5m; then
-  warn "Deployment $namespace/$service is not available"
+if ! kubectl -n "$namespace" rollout status "deployment/$service" --timeout=5m; then
+  warn "Deployment $namespace/$service rollout did not complete"
   kubectl -n "$namespace" get deployment "$service" || true
   exit 1
 fi
 port_forward_log="$runner_temp/${name}-port-forward.log"
 start_service_port_forward "$namespace" "$service" "$local_port" "$service_port" "$port_forward_log"
+
+if [ -n "$readiness_path" ]; then
+  info "Checking authenticated HTTP readiness for $name"
+  python3 "$SCRIPT_DIR/wait-for-proxymock-readiness.py" "$snapshot_dir" "$target" "$readiness_path"
+fi
 
 # Recorded 4xx baseline: replayed 4xx beyond this rate is environment drift
 # (missing users/entities), not app behavior, and must fail the gate.

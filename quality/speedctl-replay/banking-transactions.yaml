@@ -10,3 +10,4 @@ service: banking-transactions
 servicePort: 80
 localPort: 18080
 proxymockTarget: http://localhost:18080
+proxymockReadinessPath: /api/transactions
