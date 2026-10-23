@@ -51,6 +51,14 @@ jobs:
           SPEEDCTL_HOME: ${{ runner.temp }}/speedctl
           SPEEDSCALE_HOME: ${{ runner.temp }}/speedctl
         run: ./quality/scripts/run-replay.sh ${{ inputs.cluster }}
+      - name: Upload CD replay reports
+        if: always() && !inputs.cloud_load_only
+        uses: actions/upload-artifact@v7
+        with:
+          name: cd-replay-${{ inputs.cluster }}
+          path: quality/replay-reports/${{ inputs.cluster }}/
+          if-no-files-found: error
+          retention-days: 90
       - name: Run Cloud and proxymock load
         if: '!cancelled()'
         timeout-minutes: 75
@@ -65,11 +73,13 @@ jobs:
         with:
           name: cloud-load-${{ inputs.cluster }}
           path: quality/cloud-load-reports/${{ inputs.cluster }}/
-          if-no-files-found: ignore
+          if-no-files-found: error
+          retention-days: 90
       - name: Upload proxymock load reports
         if: always() && !inputs.cloud_load_only
         uses: actions/upload-artifact@v7
         with:
           name: load-${{ inputs.cluster }}
           path: quality/proxymock-reports/${{ inputs.cluster }}/load/
-          if-no-files-found: ignore
+          if-no-files-found: error
+          retention-days: 90
