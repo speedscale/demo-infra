@@ -184,33 +184,14 @@ ensure_snapshot_jwt_resign() {
 
   speedctl_cmd get snapshot "$snapshot_id" > "$current"
 
-  if jq -e --arg id "$JWT_TRANSFORM_ID" '
-    .tokenConfigId == $id
-    and .tokenizerConfig.id == $id
-    and any((.tokenizerConfig.generator // [])[]; any(.transforms[]?; .type == "jwt_resign"))
-    and ((.tokenizerConfig.generatorExpectedEnvironment.secrets // []) | length > 0)
-  ' "$current" >/dev/null; then
+  if python3 "$SCRIPT_DIR/validate-replay-snapshot.py" "$current" "$JWT_TRANSFORM_FILE"; then
     rm -f "$current" "$updated"
     return 0
   fi
 
   if ! sync_enabled; then
-    # Read-only gate runs can't attach transforms. Tolerate an env-only gap: if the
-    # jwt_resign transform itself is present, proceed even when the expected-secret
-    # env is absent. A missing env just means the JWT secret mount may be skipped
-    # (auth can miss -> goal miss), which the gate already tolerates -- it should not
-    # hard-fail the whole run. Only hard-fail when the resign transform is truly absent
-    # (e.g. dev snapshots that were synced before the env was added).
-    if jq -e --arg id "$JWT_TRANSFORM_ID" '
-      .tokenConfigId == $id
-      and any((.tokenizerConfig.generator // [])[]; any(.transforms[]?; .type == "jwt_resign"))
-    ' "$current" >/dev/null; then
-      warn "Snapshot $snapshot_id has $JWT_TRANSFORM_ID but no expected-secret env; proceeding (JWT secret mount may be skipped)."
-      rm -f "$current" "$updated"
-      return 0
-    fi
     rm -f "$current" "$updated"
-    error "Snapshot $snapshot_id is missing the $JWT_TRANSFORM_ID JWT resign transform."
+    error "Snapshot $snapshot_id needs the $JWT_TRANSFORM_ID transform and its generator secret declaration."
     error "Run with SYNC_SPEEDSCALE_ARTIFACTS=true using a user/admin key to attach replay transforms."
     return 1
   fi
@@ -229,7 +210,18 @@ ensure_snapshot_jwt_resign() {
   ' "$snapshot_file" > "$updated"
 
   mv "$updated" "$snapshot_file"
-  speedctl_cmd push snapshot "$snapshot_id" --no-analyze --force
+  speedctl_cmd push snapshot "$snapshot_id" --force
+  ready=false
+  for _ in {1..60}; do
+    status=$(speedctl_cmd get snapshot "$snapshot_id" | jq -r .status)
+    case "$status" in Complete) ready=true; break ;; Error) break ;; esac
+    sleep 5
+  done
+  if [ "$ready" != true ]; then
+    rm -f "$current" "$updated"
+    error "Snapshot processing did not complete after transform repair: $snapshot_id"
+    return 1
+  fi
   rm -f "$current" "$updated"
 }
 
@@ -284,6 +276,10 @@ wait_for_replay() {
         PASSED) return 0 ;;
         MISSED_GOALS)
           error "  $name: replay goals missed"
+          jq -r '.report.goals[]? | select(.status == "FAIL") |
+            "    " + .command + ": expected " + .expected + ", observed " + .actual' <<< "$report"
+          jq -r '.report.replayEvents[]? | select(.severity == "RES_ERROR" or .severity == "RES_FATAL") |
+            "    " + .reason + ": " + .description' <<< "$report"
           return 1
           ;;
         CANCELED|*CANCEL*)
@@ -351,6 +347,12 @@ for f in "${replay_files[@]}"; do
   dev_snapshot_id=$(get_config_value "$f" "devSnapshotID")
   staging_snapshot_id=$(get_config_value "$f" "stagingSnapshotID")
   test_config_id=$(get_config_value "$f" "testConfigID")
+  regression_snapshot_id=$(get_config_value "$f" "cloudRegressionSnapshotID")
+  regression_transform=$(get_config_value "$f" "cloudRegressionTransform")
+  regression_mock_except=$(get_config_value "$f" "cloudRegressionMockExcept")
+  regression_exclude_in=$(get_config_value "$f" "cloudRegressionExcludeInbound")
+  regression_verify_jwt=$(get_config_value "$f" "cloudRegressionVerifyJWT")
+  regression_verify_generated=$(get_config_value "$f" "cloudRegressionVerifyGenerated")
   if [ -n "$CLOUD_LOAD_PROFILE" ]; then test_config_id="$TEST_CONFIG_ID"; fi
   run_id="${GITHUB_RUN_ID:-local}"
   run_attempt="${GITHUB_RUN_ATTEMPT:-1}"
@@ -369,6 +371,23 @@ for f in "${replay_files[@]}"; do
   if [ -n "$CLOUD_LOAD_PROFILE" ]; then
     load_snapshot_id=$(get_config_value "$f" "loadSnapshotID")
     [ -n "$load_snapshot_id" ] && snapshot_id="$load_snapshot_id"
+  fi
+
+  JWT_TRANSFORM_ID="banking-jwt-resign"
+  if [ -z "$CLOUD_LOAD_PROFILE" ]; then
+    [ -n "$regression_snapshot_id" ] && snapshot_id="$regression_snapshot_id"
+    TEST_CONFIG_ID="$test_config_id"
+    TEST_CONFIG_FILE="$REPO_ROOT/quality/test-configs/$test_config_id.json"
+    if sync_enabled; then speedctl_cmd put test-config "$TEST_CONFIG_FILE"; else require_test_config; fi
+  fi
+  JWT_TRANSFORM_FILE="$REPO_ROOT/quality/transforms/$JWT_TRANSFORM_ID.json"
+  if [ -z "$CLOUD_LOAD_PROFILE" ] && [ -n "$regression_transform" ]; then
+    JWT_TRANSFORM_FILE="$REPO_ROOT/quality/transforms/$regression_transform.json"
+  fi
+  regression_args=()
+  if [ -z "$CLOUD_LOAD_PROFILE" ]; then
+    [ -n "$regression_mock_except" ] && regression_args+=(--mock-except "$regression_mock_except")
+    [ -n "$regression_exclude_in" ] && regression_args+=(--exclude-in "$regression_exclude_in")
   fi
 
   if [ ${#build_tag} -gt 50 ]; then
@@ -394,6 +413,7 @@ for f in "${replay_files[@]}"; do
       --test-config-id "$test_config_id" \
       --build-tag "$build_tag" \
       "${replay_override_args[@]}" \
+      "${regression_args[@]}" \
       ${MOCK_EXCEPT:+--mock-except $MOCK_EXCEPT} \
       --id-only 2>&1) || true
 
@@ -435,6 +455,10 @@ for f in "${replay_files[@]}"; do
   replay_statuses["$name"]="running"
 
   if wait_for_replay "$name" "$report_id"; then
+    if [ -z "$CLOUD_LOAD_PROFILE" ] && ! speedctl_cmd get report errortable "$report_id" > "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME/$report_id-errors.json"; then
+      error "  $name: status comparison evidence could not be read"
+      printf 'null\n' > "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME/$report_id-errors.json"
+    fi
     cloud_validation_args=()
     if [ -n "$CLOUD_LOAD_PROFILE" ] && jq -e '.generator.stages | length > 0' "$TEST_CONFIG_FILE" >/dev/null; then
       if ! speedctl_cmd get report latencytable "$report_id" > "$CLOUD_REPORT_DIR/latency-table.json"; then
@@ -443,6 +467,18 @@ for f in "${replay_files[@]}"; do
       cloud_validation_args=("$CLOUD_REPORT_DIR/latency-table.json")
     fi
     if [ -n "$CLOUD_LOAD_PROFILE" ] && ! python3 "$SCRIPT_DIR/validate-cloud-load-report.py" "$CLOUD_REPORT_DIR/report.json" "$TEST_CONFIG_FILE" "${cloud_validation_args[@]}"; then
+      replay_statuses["$name"]="failed"
+    elif [ -z "$CLOUD_LOAD_PROFILE" ] && ! python3 "$SCRIPT_DIR/validate-regression-report.py" "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME/$report_id.json" "$TEST_CONFIG_FILE" "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME/$report_id-errors.json"; then
+      replay_statuses["$name"]="failed"
+    elif [ -z "$CLOUD_LOAD_PROFILE" ] && [ "$regression_verify_jwt" = true ] && ! (
+      speedctl_cmd pull report "$report_id" > "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME/$report_id-download.log" 2>&1 &&
+      python3 "$SCRIPT_DIR/validate-replay-jwt.py" "$SPEEDSCALE_HOME/data/reports/$report_id/raw_rr.jsonl"
+    ); then
+      replay_statuses["$name"]="failed"
+    elif [ -z "$CLOUD_LOAD_PROFILE" ] && [ -n "$regression_verify_generated" ] && ! (
+      speedctl_cmd pull report "$report_id" > "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME/$report_id-download.log" 2>&1 &&
+      python3 "$SCRIPT_DIR/validate-generated-responses.py" "$SPEEDSCALE_HOME/data/reports/$report_id/raw_rr.jsonl" "$regression_verify_generated"
+    ); then
       replay_statuses["$name"]="failed"
     elif check_mock_utilization "$name" "$report_id" "$snapshot_id"; then
       replay_statuses["$name"]="completed"

@@ -1,0 +1,1189 @@
+{
+  "/*NO LOAD BALANCE*/\nSELECT \"installed_rank\",\"version\",\"description\",\"type\",\"script\",\"checksum\",\"installed_on\",\"installed_by\",\"execution_time\",\"success\" FROM \"transactions_service\".\"flyway_schema_history\" WHERE \"installed_rank\" > $1 ORDER BY \"installed_rank\"": {
+    "SQL": "/*NO LOAD BALANCE*/\nSELECT \"installed_rank\",\"version\",\"description\",\"type\",\"script\",\"checksum\",\"installed_on\",\"installed_by\",\"execution_time\",\"success\" FROM \"transactions_service\".\"flyway_schema_history\" WHERE \"installed_rank\" > $1 ORDER BY \"installed_rank\"",
+    "ParamOIDs": [
+      23
+    ],
+    "Fields": [
+      {
+        "Name": "installed_rank",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 23,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "version",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 54,
+        "Format": 0
+      },
+      {
+        "Name": "description",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 204,
+        "Format": 0
+      },
+      {
+        "Name": "type",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 24,
+        "Format": 0
+      },
+      {
+        "Name": "script",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 1004,
+        "Format": 0
+      },
+      {
+        "Name": "checksum",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 23,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "installed_on",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1114,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "installed_by",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 104,
+        "Format": 0
+      },
+      {
+        "Name": "execution_time",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 23,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "success",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 16,
+        "DataTypeSize": 1,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "BEGIN": {
+    "SQL": "BEGIN",
+    "ParamOIDs": [],
+    "Fields": null
+  },
+  "COMMIT": {
+    "SQL": "COMMIT",
+    "ParamOIDs": [],
+    "Fields": null
+  },
+  "SELECT * FROM (SELECT n.nspname,c.relname,a.attname,a.atttypid,a.attnotnull OR (t.typtype = 'd' AND t.typnotnull) AS attnotnull,a.atttypmod,a.attlen,t.typtypmod,row_number() OVER (PARTITION BY a.attrelid ORDER BY a.attnum) AS attnum, nullif(a.attidentity, '') as attidentity,nullif(a.attgenerated, '') as attgenerated,pg_catalog.pg_get_expr(def.adbin, def.adrelid) AS adsrc,dsc.description,t.typbasetype,t.typtype  FROM pg_catalog.pg_namespace n  JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid)  JOIN pg_catalog.pg_attribute a ON (a.attrelid=c.oid)  JOIN pg_catalog.pg_type t ON (a.atttypid = t.oid)  LEFT JOIN pg_catalog.pg_attrdef def ON (a.attrelid=def.adrelid AND a.attnum = def.adnum)  LEFT JOIN pg_catalog.pg_description dsc ON (c.oid=dsc.objoid AND a.attnum = dsc.objsubid)  LEFT JOIN pg_catalog.pg_class dc ON (dc.oid=dsc.classoid AND dc.relname='pg_class')  LEFT JOIN pg_catalog.pg_namespace dn ON (dc.relnamespace=dn.oid AND dn.nspname='pg_catalog')  WHERE c.relkind in ('r','p','v','f','m') and a.attnum > 0 AND NOT a.attisdropped  AND n.nspname LIKE 'public') c WHERE true  AND attname LIKE '%' ORDER BY nspname,c.relname,attnum ": {
+    "SQL": "SELECT * FROM (SELECT n.nspname,c.relname,a.attname,a.atttypid,a.attnotnull OR (t.typtype = 'd' AND t.typnotnull) AS attnotnull,a.atttypmod,a.attlen,t.typtypmod,row_number() OVER (PARTITION BY a.attrelid ORDER BY a.attnum) AS attnum, nullif(a.attidentity, '') as attidentity,nullif(a.attgenerated, '') as attgenerated,pg_catalog.pg_get_expr(def.adbin, def.adrelid) AS adsrc,dsc.description,t.typbasetype,t.typtype  FROM pg_catalog.pg_namespace n  JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid)  JOIN pg_catalog.pg_attribute a ON (a.attrelid=c.oid)  JOIN pg_catalog.pg_type t ON (a.atttypid = t.oid)  LEFT JOIN pg_catalog.pg_attrdef def ON (a.attrelid=def.adrelid AND a.attnum = def.adnum)  LEFT JOIN pg_catalog.pg_description dsc ON (c.oid=dsc.objoid AND a.attnum = dsc.objsubid)  LEFT JOIN pg_catalog.pg_class dc ON (dc.oid=dsc.classoid AND dc.relname='pg_class')  LEFT JOIN pg_catalog.pg_namespace dn ON (dc.relnamespace=dn.oid AND dn.nspname='pg_catalog')  WHERE c.relkind in ('r','p','v','f','m') and a.attnum > 0 AND NOT a.attisdropped  AND n.nspname LIKE 'public') c WHERE true  AND attname LIKE '%' ORDER BY nspname,c.relname,attnum ",
+    "ParamOIDs": [],
+    "Fields": [
+      {
+        "Name": "nspname",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "relname",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "attname",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "atttypid",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 26,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "attnotnull",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 16,
+        "DataTypeSize": 1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "atttypmod",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 23,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "attlen",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 21,
+        "DataTypeSize": 2,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "typtypmod",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 23,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "attnum",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "attidentity",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 18,
+        "DataTypeSize": 1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "attgenerated",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 18,
+        "DataTypeSize": 1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "adsrc",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "description",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "typbasetype",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 26,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "typtype",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 18,
+        "DataTypeSize": 1,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "SELECT * FROM (SELECT n.nspname,c.relname,a.attname,a.atttypid,a.attnotnull OR (t.typtype = 'd' AND t.typnotnull) AS attnotnull,a.atttypmod,a.attlen,t.typtypmod,row_number() OVER (PARTITION BY a.attrelid ORDER BY a.attnum) AS attnum, nullif(a.attidentity, '') as attidentity,nullif(a.attgenerated, '') as attgenerated,pg_catalog.pg_get_expr(def.adbin, def.adrelid) AS adsrc,dsc.description,t.typbasetype,t.typtype  FROM pg_catalog.pg_namespace n  JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid)  JOIN pg_catalog.pg_attribute a ON (a.attrelid=c.oid)  JOIN pg_catalog.pg_type t ON (a.atttypid = t.oid)  LEFT JOIN pg_catalog.pg_attrdef def ON (a.attrelid=def.adrelid AND a.attnum = def.adnum)  LEFT JOIN pg_catalog.pg_description dsc ON (c.oid=dsc.objoid AND a.attnum = dsc.objsubid)  LEFT JOIN pg_catalog.pg_class dc ON (dc.oid=dsc.classoid AND dc.relname='pg_class')  LEFT JOIN pg_catalog.pg_namespace dn ON (dc.relnamespace=dn.oid AND dn.nspname='pg_catalog')  WHERE c.relkind in ('r','p','v','f','m') and a.attnum > 0 AND NOT a.attisdropped  AND n.nspname LIKE 'transactions_service') c WHERE true  AND attname LIKE '%' ORDER BY nspname,c.relname,attnum ": {
+    "SQL": "SELECT * FROM (SELECT n.nspname,c.relname,a.attname,a.atttypid,a.attnotnull OR (t.typtype = 'd' AND t.typnotnull) AS attnotnull,a.atttypmod,a.attlen,t.typtypmod,row_number() OVER (PARTITION BY a.attrelid ORDER BY a.attnum) AS attnum, nullif(a.attidentity, '') as attidentity,nullif(a.attgenerated, '') as attgenerated,pg_catalog.pg_get_expr(def.adbin, def.adrelid) AS adsrc,dsc.description,t.typbasetype,t.typtype  FROM pg_catalog.pg_namespace n  JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid)  JOIN pg_catalog.pg_attribute a ON (a.attrelid=c.oid)  JOIN pg_catalog.pg_type t ON (a.atttypid = t.oid)  LEFT JOIN pg_catalog.pg_attrdef def ON (a.attrelid=def.adrelid AND a.attnum = def.adnum)  LEFT JOIN pg_catalog.pg_description dsc ON (c.oid=dsc.objoid AND a.attnum = dsc.objsubid)  LEFT JOIN pg_catalog.pg_class dc ON (dc.oid=dsc.classoid AND dc.relname='pg_class')  LEFT JOIN pg_catalog.pg_namespace dn ON (dc.relnamespace=dn.oid AND dn.nspname='pg_catalog')  WHERE c.relkind in ('r','p','v','f','m') and a.attnum > 0 AND NOT a.attisdropped  AND n.nspname LIKE 'transactions_service') c WHERE true  AND attname LIKE '%' ORDER BY nspname,c.relname,attnum ",
+    "ParamOIDs": [],
+    "Fields": [
+      {
+        "Name": "nspname",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "relname",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "attname",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "atttypid",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 26,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "attnotnull",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 16,
+        "DataTypeSize": 1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "atttypmod",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 23,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "attlen",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 21,
+        "DataTypeSize": 2,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "typtypmod",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 23,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "attnum",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "attidentity",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 18,
+        "DataTypeSize": 1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "attgenerated",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 18,
+        "DataTypeSize": 1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "adsrc",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "description",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "typbasetype",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 26,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "typtype",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 18,
+        "DataTypeSize": 1,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "SELECT COUNT(*) FROM pg_namespace WHERE nspname=$1": {
+    "SQL": "SELECT COUNT(*) FROM pg_namespace WHERE nspname=$1",
+    "ParamOIDs": [
+      19
+    ],
+    "Fields": [
+      {
+        "Name": "count",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "SELECT CURRENT_USER": {
+    "SQL": "SELECT CURRENT_USER",
+    "ParamOIDs": [],
+    "Fields": [
+      {
+        "Name": "current_user",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "SELECT EXISTS (\n  SELECT 1\n  FROM   pg_catalog.pg_class c\n  JOIN   pg_catalog.pg_namespace n ON n.oid = c.relnamespace\n  WHERE  n.nspname = $1\n  AND    c.relname = $2\n  AND    c.relkind = 'r'\n)": {
+    "SQL": "SELECT EXISTS (\n  SELECT 1\n  FROM   pg_catalog.pg_class c\n  JOIN   pg_catalog.pg_namespace n ON n.oid = c.relnamespace\n  WHERE  n.nspname = $1\n  AND    c.relname = $2\n  AND    c.relkind = 'r'\n)",
+    "ParamOIDs": [
+      19,
+      19
+    ],
+    "Fields": [
+      {
+        "Name": "exists",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 16,
+        "DataTypeSize": 1,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM, c.relname AS TABLE_NAME,  CASE n.nspname ~ '^pg_' OR n.nspname = 'information_schema'  WHEN true THEN CASE  WHEN n.nspname = 'pg_catalog' OR n.nspname = 'information_schema' THEN CASE c.relkind   WHEN 'r' THEN 'SYSTEM TABLE'   WHEN 'v' THEN 'SYSTEM VIEW'   WHEN 'i' THEN 'SYSTEM INDEX'   ELSE NULL   END  WHEN n.nspname = 'pg_toast' THEN CASE c.relkind   WHEN 'r' THEN 'SYSTEM TOAST TABLE'   WHEN 'i' THEN 'SYSTEM TOAST INDEX'   ELSE NULL   END  ELSE CASE c.relkind   WHEN 'r' THEN 'TEMPORARY TABLE'   WHEN 'p' THEN 'TEMPORARY TABLE'   WHEN 'i' THEN 'TEMPORARY INDEX'   WHEN 'S' THEN 'TEMPORARY SEQUENCE'   WHEN 'v' THEN 'TEMPORARY VIEW'   ELSE NULL   END  END  WHEN false THEN CASE c.relkind  WHEN 'r' THEN 'TABLE'  WHEN 'p' THEN 'PARTITIONED TABLE'  WHEN 'i' THEN 'INDEX'  WHEN 'P' then 'PARTITIONED INDEX'  WHEN 'S' THEN 'SEQUENCE'  WHEN 'v' THEN 'VIEW'  WHEN 'c' THEN 'TYPE'  WHEN 'f' THEN 'FOREIGN TABLE'  WHEN 'm' THEN 'MATERIALIZED VIEW'  ELSE NULL  END  ELSE NULL  END  AS TABLE_TYPE, d.description AS REMARKS,  '' as TYPE_CAT, '' as TYPE_SCHEM, '' as TYPE_NAME, '' AS SELF_REFERENCING_COL_NAME, '' AS REF_GENERATION  FROM pg_catalog.pg_namespace n, pg_catalog.pg_class c  LEFT JOIN pg_catalog.pg_description d ON (c.oid = d.objoid AND d.objsubid = 0  and d.classoid = 'pg_class'::regclass)  WHERE c.relnamespace = n.oid  AND n.nspname LIKE 'public' AND c.relname LIKE '%' AND (false  OR ( c.relkind = 'r' AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema' )  OR ( c.relkind = 'v' AND n.nspname <> 'pg_catalog' AND n.nspname <> 'information_schema' )  OR ( c.relkind = 'm' )  OR ( c.relkind = 'p' AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema' ) )  ORDER BY TABLE_TYPE,TABLE_SCHEM,TABLE_NAME ": {
+    "SQL": "SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM, c.relname AS TABLE_NAME,  CASE n.nspname ~ '^pg_' OR n.nspname = 'information_schema'  WHEN true THEN CASE  WHEN n.nspname = 'pg_catalog' OR n.nspname = 'information_schema' THEN CASE c.relkind   WHEN 'r' THEN 'SYSTEM TABLE'   WHEN 'v' THEN 'SYSTEM VIEW'   WHEN 'i' THEN 'SYSTEM INDEX'   ELSE NULL   END  WHEN n.nspname = 'pg_toast' THEN CASE c.relkind   WHEN 'r' THEN 'SYSTEM TOAST TABLE'   WHEN 'i' THEN 'SYSTEM TOAST INDEX'   ELSE NULL   END  ELSE CASE c.relkind   WHEN 'r' THEN 'TEMPORARY TABLE'   WHEN 'p' THEN 'TEMPORARY TABLE'   WHEN 'i' THEN 'TEMPORARY INDEX'   WHEN 'S' THEN 'TEMPORARY SEQUENCE'   WHEN 'v' THEN 'TEMPORARY VIEW'   ELSE NULL   END  END  WHEN false THEN CASE c.relkind  WHEN 'r' THEN 'TABLE'  WHEN 'p' THEN 'PARTITIONED TABLE'  WHEN 'i' THEN 'INDEX'  WHEN 'P' then 'PARTITIONED INDEX'  WHEN 'S' THEN 'SEQUENCE'  WHEN 'v' THEN 'VIEW'  WHEN 'c' THEN 'TYPE'  WHEN 'f' THEN 'FOREIGN TABLE'  WHEN 'm' THEN 'MATERIALIZED VIEW'  ELSE NULL  END  ELSE NULL  END  AS TABLE_TYPE, d.description AS REMARKS,  '' as TYPE_CAT, '' as TYPE_SCHEM, '' as TYPE_NAME, '' AS SELF_REFERENCING_COL_NAME, '' AS REF_GENERATION  FROM pg_catalog.pg_namespace n, pg_catalog.pg_class c  LEFT JOIN pg_catalog.pg_description d ON (c.oid = d.objoid AND d.objsubid = 0  and d.classoid = 'pg_class'::regclass)  WHERE c.relnamespace = n.oid  AND n.nspname LIKE 'public' AND c.relname LIKE '%' AND (false  OR ( c.relkind = 'r' AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema' )  OR ( c.relkind = 'v' AND n.nspname <> 'pg_catalog' AND n.nspname <> 'information_schema' )  OR ( c.relkind = 'm' )  OR ( c.relkind = 'p' AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema' ) )  ORDER BY TABLE_TYPE,TABLE_SCHEM,TABLE_NAME ",
+    "ParamOIDs": [],
+    "Fields": [
+      {
+        "Name": "table_cat",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "table_schem",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "table_name",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "table_type",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "remarks",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "type_cat",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "type_schem",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "type_name",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "self_referencing_col_name",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "ref_generation",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM, c.relname AS TABLE_NAME,  CASE n.nspname ~ '^pg_' OR n.nspname = 'information_schema'  WHEN true THEN CASE  WHEN n.nspname = 'pg_catalog' OR n.nspname = 'information_schema' THEN CASE c.relkind   WHEN 'r' THEN 'SYSTEM TABLE'   WHEN 'v' THEN 'SYSTEM VIEW'   WHEN 'i' THEN 'SYSTEM INDEX'   ELSE NULL   END  WHEN n.nspname = 'pg_toast' THEN CASE c.relkind   WHEN 'r' THEN 'SYSTEM TOAST TABLE'   WHEN 'i' THEN 'SYSTEM TOAST INDEX'   ELSE NULL   END  ELSE CASE c.relkind   WHEN 'r' THEN 'TEMPORARY TABLE'   WHEN 'p' THEN 'TEMPORARY TABLE'   WHEN 'i' THEN 'TEMPORARY INDEX'   WHEN 'S' THEN 'TEMPORARY SEQUENCE'   WHEN 'v' THEN 'TEMPORARY VIEW'   ELSE NULL   END  END  WHEN false THEN CASE c.relkind  WHEN 'r' THEN 'TABLE'  WHEN 'p' THEN 'PARTITIONED TABLE'  WHEN 'i' THEN 'INDEX'  WHEN 'P' then 'PARTITIONED INDEX'  WHEN 'S' THEN 'SEQUENCE'  WHEN 'v' THEN 'VIEW'  WHEN 'c' THEN 'TYPE'  WHEN 'f' THEN 'FOREIGN TABLE'  WHEN 'm' THEN 'MATERIALIZED VIEW'  ELSE NULL  END  ELSE NULL  END  AS TABLE_TYPE, d.description AS REMARKS,  '' as TYPE_CAT, '' as TYPE_SCHEM, '' as TYPE_NAME, '' AS SELF_REFERENCING_COL_NAME, '' AS REF_GENERATION  FROM pg_catalog.pg_namespace n, pg_catalog.pg_class c  LEFT JOIN pg_catalog.pg_description d ON (c.oid = d.objoid AND d.objsubid = 0  and d.classoid = 'pg_class'::regclass)  WHERE c.relnamespace = n.oid  AND n.nspname LIKE 'transactions_service' AND c.relname LIKE '%' AND (false  OR ( c.relkind = 'r' AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema' )  OR ( c.relkind = 'v' AND n.nspname <> 'pg_catalog' AND n.nspname <> 'information_schema' )  OR ( c.relkind = 'm' )  OR ( c.relkind = 'p' AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema' ) )  ORDER BY TABLE_TYPE,TABLE_SCHEM,TABLE_NAME ": {
+    "SQL": "SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM, c.relname AS TABLE_NAME,  CASE n.nspname ~ '^pg_' OR n.nspname = 'information_schema'  WHEN true THEN CASE  WHEN n.nspname = 'pg_catalog' OR n.nspname = 'information_schema' THEN CASE c.relkind   WHEN 'r' THEN 'SYSTEM TABLE'   WHEN 'v' THEN 'SYSTEM VIEW'   WHEN 'i' THEN 'SYSTEM INDEX'   ELSE NULL   END  WHEN n.nspname = 'pg_toast' THEN CASE c.relkind   WHEN 'r' THEN 'SYSTEM TOAST TABLE'   WHEN 'i' THEN 'SYSTEM TOAST INDEX'   ELSE NULL   END  ELSE CASE c.relkind   WHEN 'r' THEN 'TEMPORARY TABLE'   WHEN 'p' THEN 'TEMPORARY TABLE'   WHEN 'i' THEN 'TEMPORARY INDEX'   WHEN 'S' THEN 'TEMPORARY SEQUENCE'   WHEN 'v' THEN 'TEMPORARY VIEW'   ELSE NULL   END  END  WHEN false THEN CASE c.relkind  WHEN 'r' THEN 'TABLE'  WHEN 'p' THEN 'PARTITIONED TABLE'  WHEN 'i' THEN 'INDEX'  WHEN 'P' then 'PARTITIONED INDEX'  WHEN 'S' THEN 'SEQUENCE'  WHEN 'v' THEN 'VIEW'  WHEN 'c' THEN 'TYPE'  WHEN 'f' THEN 'FOREIGN TABLE'  WHEN 'm' THEN 'MATERIALIZED VIEW'  ELSE NULL  END  ELSE NULL  END  AS TABLE_TYPE, d.description AS REMARKS,  '' as TYPE_CAT, '' as TYPE_SCHEM, '' as TYPE_NAME, '' AS SELF_REFERENCING_COL_NAME, '' AS REF_GENERATION  FROM pg_catalog.pg_namespace n, pg_catalog.pg_class c  LEFT JOIN pg_catalog.pg_description d ON (c.oid = d.objoid AND d.objsubid = 0  and d.classoid = 'pg_class'::regclass)  WHERE c.relnamespace = n.oid  AND n.nspname LIKE 'transactions_service' AND c.relname LIKE '%' AND (false  OR ( c.relkind = 'r' AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema' )  OR ( c.relkind = 'v' AND n.nspname <> 'pg_catalog' AND n.nspname <> 'information_schema' )  OR ( c.relkind = 'm' )  OR ( c.relkind = 'p' AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema' ) )  ORDER BY TABLE_TYPE,TABLE_SCHEM,TABLE_NAME ",
+    "ParamOIDs": [],
+    "Fields": [
+      {
+        "Name": "table_cat",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "table_schem",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "table_name",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "table_type",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "remarks",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "type_cat",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "type_schem",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "type_name",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "self_referencing_col_name",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "ref_generation",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "SELECT current_schema": {
+    "SQL": "SELECT current_schema",
+    "ParamOIDs": [],
+    "Fields": [
+      {
+        "Name": "current_schema",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "SELECT current_user": {
+    "SQL": "SELECT current_user",
+    "ParamOIDs": [],
+    "Fields": [
+      {
+        "Name": "current_user",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "SELECT pg_try_advisory_xact_lock(77432255528011)": {
+    "SQL": "SELECT pg_try_advisory_xact_lock(77432255528011)",
+    "ParamOIDs": [],
+    "Fields": [
+      {
+        "Name": "pg_try_advisory_xact_lock",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 16,
+        "DataTypeSize": 1,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "SELECT set_config('search_path', $1, false)": {
+    "SQL": "SELECT set_config('search_path', $1, false)",
+    "ParamOIDs": [
+      25
+    ],
+    "Fields": [
+      {
+        "Name": "set_config",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "SET ROLE 'transactions_service_user'": {
+    "SQL": "SET ROLE 'transactions_service_user'",
+    "ParamOIDs": [],
+    "Fields": null
+  },
+  "SET application_name = 'PostgreSQL JDBC Driver'": {
+    "SQL": "SET application_name = 'PostgreSQL JDBC Driver'",
+    "ParamOIDs": [],
+    "Fields": null
+  },
+  "SET extra_float_digits = 3": {
+    "SQL": "SET extra_float_digits = 3",
+    "ParamOIDs": [],
+    "Fields": null
+  },
+  "SHOW TRANSACTION ISOLATION LEVEL": {
+    "SQL": "SHOW TRANSACTION ISOLATION LEVEL",
+    "ParamOIDs": [],
+    "Fields": [
+      {
+        "Name": "transaction_isolation",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "SHOW search_path": {
+    "SQL": "SHOW search_path",
+    "ParamOIDs": [],
+    "Fields": [
+      {
+        "Name": "search_path",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "insert into transactions_service.transactions (amount,created_at,description,from_account_id,processed_at,status,to_account_id,type,user_id) values ($1,$2,$3,$4,$5,$6,$7,$8,$9)\nRETURNING *": {
+    "SQL": "insert into transactions_service.transactions (amount,created_at,description,from_account_id,processed_at,status,to_account_id,type,user_id) values ($1,$2,$3,$4,$5,$6,$7,$8,$9)\nRETURNING *",
+    "ParamOIDs": [
+      701,
+      1114,
+      1043,
+      20,
+      1114,
+      1043,
+      20,
+      1043,
+      20
+    ],
+    "Fields": [
+      {
+        "Name": "id",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "user_id",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "from_account_id",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "to_account_id",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "amount",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 701,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "type",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 24,
+        "Format": 0
+      },
+      {
+        "Name": "description",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 504,
+        "Format": 0
+      },
+      {
+        "Name": "status",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 24,
+        "Format": 0
+      },
+      {
+        "Name": "created_at",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1114,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "processed_at",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1114,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "select * from information_schema.sequences": {
+    "SQL": "select * from information_schema.sequences",
+    "ParamOIDs": [],
+    "Fields": [
+      {
+        "Name": "sequence_catalog",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "sequence_schema",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "sequence_name",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "data_type",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "numeric_precision",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 23,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "numeric_precision_radix",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 23,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "numeric_scale",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 23,
+        "DataTypeSize": 4,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "start_value",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "minimum_value",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "maximum_value",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "increment",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "cycle_option",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 7,
+        "Format": 0
+      }
+    ]
+  },
+  "select current_schema()": {
+    "SQL": "select current_schema()",
+    "ParamOIDs": [],
+    "Fields": [
+      {
+        "Name": "current_schema",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 19,
+        "DataTypeSize": 64,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "select string_agg(word, ',') from pg_catalog.pg_get_keywords() where word <> ALL ('{a,abs,absolute,action,ada,add,admin,after,all,allocate,alter,always,and,any,are,array,as,asc,asensitive,assertion,assignment,asymmetric,at,atomic,attribute,attributes,authorization,avg,before,begin,bernoulli,between,bigint,binary,blob,boolean,both,breadth,by,c,call,called,cardinality,cascade,cascaded,case,cast,catalog,catalog_name,ceil,ceiling,chain,char,char_length,character,character_length,character_set_catalog,character_set_name,character_set_schema,characteristics,characters,check,checked,class_origin,clob,close,coalesce,cobol,code_units,collate,collation,collation_catalog,collation_name,collation_schema,collect,column,column_name,command_function,command_function_code,commit,committed,condition,condition_number,connect,connection_name,constraint,constraint_catalog,constraint_name,constraint_schema,constraints,constructors,contains,continue,convert,corr,corresponding,count,covar_pop,covar_samp,create,cross,cube,cume_dist,current,current_collation,current_date,current_default_transform_group,current_path,current_role,current_time,current_timestamp,current_transform_group_for_type,current_user,cursor,cursor_name,cycle,data,date,datetime_interval_code,datetime_interval_precision,day,deallocate,dec,decimal,declare,default,defaults,deferrable,deferred,defined,definer,degree,delete,dense_rank,depth,deref,derived,desc,describe,descriptor,deterministic,diagnostics,disconnect,dispatch,distinct,domain,double,drop,dynamic,dynamic_function,dynamic_function_code,each,element,else,end,end-exec,equals,escape,every,except,exception,exclude,excluding,exec,execute,exists,exp,external,extract,false,fetch,filter,final,first,float,floor,following,for,foreign,fortran,found,free,from,full,function,fusion,g,general,get,global,go,goto,grant,granted,group,grouping,having,hierarchy,hold,hour,identity,immediate,implementation,in,including,increment,indicator,initially,inner,inout,input,insensitive,insert,instance,instantiable,int,integer,intersect,intersection,interval,into,invoker,is,isolation,join,k,key,key_member,key_type,language,large,last,lateral,leading,left,length,level,like,ln,local,localtime,localtimestamp,locator,lower,m,map,match,matched,max,maxvalue,member,merge,message_length,message_octet_length,message_text,method,min,minute,minvalue,mod,modifies,module,month,more,multiset,mumps,name,names,national,natural,nchar,nclob,nesting,new,next,no,none,normalize,normalized,not,\"null\",nullable,nullif,nulls,number,numeric,object,octet_length,octets,of,old,on,only,open,option,options,or,order,ordering,ordinality,others,out,outer,output,over,overlaps,overlay,overriding,pad,parameter,parameter_mode,parameter_name,parameter_ordinal_position,parameter_specific_catalog,parameter_specific_name,parameter_specific_schema,partial,partition,pascal,path,percent_rank,percentile_cont,percentile_disc,placing,pli,position,power,preceding,precision,prepare,preserve,primary,prior,privileges,procedure,public,range,rank,read,reads,real,recursive,ref,references,referencing,regr_avgx,regr_avgy,regr_count,regr_intercept,regr_r2,regr_slope,regr_sxx,regr_sxy,regr_syy,relative,release,repeatable,restart,result,return,returned_cardinality,returned_length,returned_octet_length,returned_sqlstate,returns,revoke,right,role,rollback,rollup,routine,routine_catalog,routine_name,routine_schema,row,row_count,row_number,rows,savepoint,scale,schema,schema_name,scope_catalog,scope_name,scope_schema,scroll,search,second,section,security,select,self,sensitive,sequence,serializable,server_name,session,session_user,set,sets,similar,simple,size,smallint,some,source,space,specific,specific_name,specifictype,sql,sqlexception,sqlstate,sqlwarning,sqrt,start,state,statement,static,stddev_pop,stddev_samp,structure,style,subclass_origin,submultiset,substring,sum,symmetric,system,system_user,table,table_name,tablesample,temporary,then,ties,time,timestamp,timezone_hour,timezone_minute,to,top_level_count,trailing,transaction,transaction_active,transactions_committed,transactions_rolled_back,transform,transforms,translate,translation,treat,trigger,trigger_catalog,trigger_name,trigger_schema,trim,true,type,uescape,unbounded,uncommitted,under,union,unique,unknown,unnamed,unnest,update,upper,usage,user,user_defined_type_catalog,user_defined_type_code,user_defined_type_name,user_defined_type_schema,using,value,values,var_pop,var_samp,varchar,varying,view,when,whenever,where,width_bucket,window,with,within,without,work,write,year,zone}'::text[])": {
+    "SQL": "select string_agg(word, ',') from pg_catalog.pg_get_keywords() where word <> ALL ('{a,abs,absolute,action,ada,add,admin,after,all,allocate,alter,always,and,any,are,array,as,asc,asensitive,assertion,assignment,asymmetric,at,atomic,attribute,attributes,authorization,avg,before,begin,bernoulli,between,bigint,binary,blob,boolean,both,breadth,by,c,call,called,cardinality,cascade,cascaded,case,cast,catalog,catalog_name,ceil,ceiling,chain,char,char_length,character,character_length,character_set_catalog,character_set_name,character_set_schema,characteristics,characters,check,checked,class_origin,clob,close,coalesce,cobol,code_units,collate,collation,collation_catalog,collation_name,collation_schema,collect,column,column_name,command_function,command_function_code,commit,committed,condition,condition_number,connect,connection_name,constraint,constraint_catalog,constraint_name,constraint_schema,constraints,constructors,contains,continue,convert,corr,corresponding,count,covar_pop,covar_samp,create,cross,cube,cume_dist,current,current_collation,current_date,current_default_transform_group,current_path,current_role,current_time,current_timestamp,current_transform_group_for_type,current_user,cursor,cursor_name,cycle,data,date,datetime_interval_code,datetime_interval_precision,day,deallocate,dec,decimal,declare,default,defaults,deferrable,deferred,defined,definer,degree,delete,dense_rank,depth,deref,derived,desc,describe,descriptor,deterministic,diagnostics,disconnect,dispatch,distinct,domain,double,drop,dynamic,dynamic_function,dynamic_function_code,each,element,else,end,end-exec,equals,escape,every,except,exception,exclude,excluding,exec,execute,exists,exp,external,extract,false,fetch,filter,final,first,float,floor,following,for,foreign,fortran,found,free,from,full,function,fusion,g,general,get,global,go,goto,grant,granted,group,grouping,having,hierarchy,hold,hour,identity,immediate,implementation,in,including,increment,indicator,initially,inner,inout,input,insensitive,insert,instance,instantiable,int,integer,intersect,intersection,interval,into,invoker,is,isolation,join,k,key,key_member,key_type,language,large,last,lateral,leading,left,length,level,like,ln,local,localtime,localtimestamp,locator,lower,m,map,match,matched,max,maxvalue,member,merge,message_length,message_octet_length,message_text,method,min,minute,minvalue,mod,modifies,module,month,more,multiset,mumps,name,names,national,natural,nchar,nclob,nesting,new,next,no,none,normalize,normalized,not,\"null\",nullable,nullif,nulls,number,numeric,object,octet_length,octets,of,old,on,only,open,option,options,or,order,ordering,ordinality,others,out,outer,output,over,overlaps,overlay,overriding,pad,parameter,parameter_mode,parameter_name,parameter_ordinal_position,parameter_specific_catalog,parameter_specific_name,parameter_specific_schema,partial,partition,pascal,path,percent_rank,percentile_cont,percentile_disc,placing,pli,position,power,preceding,precision,prepare,preserve,primary,prior,privileges,procedure,public,range,rank,read,reads,real,recursive,ref,references,referencing,regr_avgx,regr_avgy,regr_count,regr_intercept,regr_r2,regr_slope,regr_sxx,regr_sxy,regr_syy,relative,release,repeatable,restart,result,return,returned_cardinality,returned_length,returned_octet_length,returned_sqlstate,returns,revoke,right,role,rollback,rollup,routine,routine_catalog,routine_name,routine_schema,row,row_count,row_number,rows,savepoint,scale,schema,schema_name,scope_catalog,scope_name,scope_schema,scroll,search,second,section,security,select,self,sensitive,sequence,serializable,server_name,session,session_user,set,sets,similar,simple,size,smallint,some,source,space,specific,specific_name,specifictype,sql,sqlexception,sqlstate,sqlwarning,sqrt,start,state,statement,static,stddev_pop,stddev_samp,structure,style,subclass_origin,submultiset,substring,sum,symmetric,system,system_user,table,table_name,tablesample,temporary,then,ties,time,timestamp,timezone_hour,timezone_minute,to,top_level_count,trailing,transaction,transaction_active,transactions_committed,transactions_rolled_back,transform,transforms,translate,translation,treat,trigger,trigger_catalog,trigger_name,trigger_schema,trim,true,type,uescape,unbounded,uncommitted,under,union,unique,unknown,unnamed,unnest,update,upper,usage,user,user_defined_type_catalog,user_defined_type_code,user_defined_type_name,user_defined_type_schema,using,value,values,var_pop,var_samp,varchar,varying,view,when,whenever,where,width_bucket,window,with,within,without,work,write,year,zone}'::text[])",
+    "ParamOIDs": [],
+    "Fields": [
+      {
+        "Name": "string_agg",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 25,
+        "DataTypeSize": -1,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "select t1_0.id,t1_0.amount,t1_0.created_at,t1_0.description,t1_0.from_account_id,t1_0.processed_at,t1_0.status,t1_0.to_account_id,t1_0.type,t1_0.user_id from transactions_service.transactions t1_0 where t1_0.user_id=$1 and (t1_0.from_account_id=$2 or t1_0.to_account_id=$3) order by t1_0.created_at desc": {
+    "SQL": "select t1_0.id,t1_0.amount,t1_0.created_at,t1_0.description,t1_0.from_account_id,t1_0.processed_at,t1_0.status,t1_0.to_account_id,t1_0.type,t1_0.user_id from transactions_service.transactions t1_0 where t1_0.user_id=$1 and (t1_0.from_account_id=$2 or t1_0.to_account_id=$3) order by t1_0.created_at desc",
+    "ParamOIDs": [
+      20,
+      20,
+      20
+    ],
+    "Fields": [
+      {
+        "Name": "id",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "amount",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 701,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "created_at",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1114,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "description",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 504,
+        "Format": 0
+      },
+      {
+        "Name": "from_account_id",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "processed_at",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1114,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "status",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 24,
+        "Format": 0
+      },
+      {
+        "Name": "to_account_id",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "type",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 24,
+        "Format": 0
+      },
+      {
+        "Name": "user_id",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  },
+  "select t1_0.id,t1_0.amount,t1_0.created_at,t1_0.description,t1_0.from_account_id,t1_0.processed_at,t1_0.status,t1_0.to_account_id,t1_0.type,t1_0.user_id from transactions_service.transactions t1_0 where t1_0.user_id=$1 order by t1_0.created_at desc": {
+    "SQL": "select t1_0.id,t1_0.amount,t1_0.created_at,t1_0.description,t1_0.from_account_id,t1_0.processed_at,t1_0.status,t1_0.to_account_id,t1_0.type,t1_0.user_id from transactions_service.transactions t1_0 where t1_0.user_id=$1 order by t1_0.created_at desc",
+    "ParamOIDs": [
+      20
+    ],
+    "Fields": [
+      {
+        "Name": "id",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "amount",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 701,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "created_at",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1114,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "description",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 504,
+        "Format": 0
+      },
+      {
+        "Name": "from_account_id",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "processed_at",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1114,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "status",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 24,
+        "Format": 0
+      },
+      {
+        "Name": "to_account_id",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      },
+      {
+        "Name": "type",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "TypeModifier": 24,
+        "Format": 0
+      },
+      {
+        "Name": "user_id",
+        "TableOID": 0,
+        "TableAttributeNumber": 0,
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "TypeModifier": -1,
+        "Format": 0
+      }
+    ]
+  }
+}

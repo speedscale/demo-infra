@@ -1,0 +1,201 @@
+{
+  "INSERT INTO user_service.users (created_at, email, password_hash, roles, updated_at, username)\nVALUES ($1, $2, $3, $4, $5, $6)\nRETURNING id": {
+    "Fields": [
+      {
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "Format": 0,
+        "Name": "id",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": -1
+      }
+    ],
+    "ParamOIDs": [
+      1114,
+      1043,
+      1043,
+      1043,
+      1114,
+      1043
+    ],
+    "SQL": "INSERT INTO user_service.users (created_at, email, password_hash, roles, updated_at, username)\nVALUES ($1, $2, $3, $4, $5, $6)\nRETURNING id"
+  },
+  "SELECT EXISTS (\n    SELECT 1\n    FROM user_service.users AS u\n    WHERE u.email = $1)": {
+    "Fields": [
+      {
+        "DataTypeOID": 16,
+        "DataTypeSize": 1,
+        "Format": 0,
+        "Name": "exists",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": -1
+      }
+    ],
+    "ParamOIDs": [
+      25
+    ],
+    "SQL": "SELECT EXISTS (\n    SELECT 1\n    FROM user_service.users AS u\n    WHERE u.email = $1)"
+  },
+  "SELECT EXISTS (\n    SELECT 1\n    FROM user_service.users AS u\n    WHERE u.username = $1)": {
+    "Fields": [
+      {
+        "DataTypeOID": 16,
+        "DataTypeSize": 1,
+        "Format": 0,
+        "Name": "exists",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": -1
+      }
+    ],
+    "ParamOIDs": [
+      25
+    ],
+    "SQL": "SELECT EXISTS (\n    SELECT 1\n    FROM user_service.users AS u\n    WHERE u.username = $1)"
+  },
+  "SELECT u.id, u.created_at, u.email, u.password_hash, u.roles, u.updated_at, u.username\nFROM user_service.users AS u\nWHERE u.username = $1\nLIMIT 1": {
+    "Fields": [
+      {
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "Format": 0,
+        "Name": "id",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": -1
+      },
+      {
+        "DataTypeOID": 1114,
+        "DataTypeSize": 8,
+        "Format": 0,
+        "Name": "created_at",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": -1
+      },
+      {
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "Format": 0,
+        "Name": "email",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": 104
+      },
+      {
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "Format": 0,
+        "Name": "password_hash",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": 259
+      },
+      {
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "Format": 0,
+        "Name": "roles",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": 54
+      },
+      {
+        "DataTypeOID": 1114,
+        "DataTypeSize": 8,
+        "Format": 0,
+        "Name": "updated_at",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": -1
+      },
+      {
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "Format": 0,
+        "Name": "username",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": 54
+      }
+    ],
+    "ParamOIDs": [
+      25
+    ],
+    "SQL": "SELECT u.id, u.created_at, u.email, u.password_hash, u.roles, u.updated_at, u.username\nFROM user_service.users AS u\nWHERE u.username = $1\nLIMIT 1"
+  },
+  "SELECT u.id, u.created_at, u.email, u.password_hash, u.roles, u.updated_at, u.username\nFROM user_service.users AS u\nWHERE u.username = $1 OR u.email = $2\nLIMIT 1": {
+    "Fields": [
+      {
+        "DataTypeOID": 20,
+        "DataTypeSize": 8,
+        "Format": 0,
+        "Name": "id",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": -1
+      },
+      {
+        "DataTypeOID": 1114,
+        "DataTypeSize": 8,
+        "Format": 0,
+        "Name": "created_at",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": -1
+      },
+      {
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "Format": 0,
+        "Name": "email",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": 104
+      },
+      {
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "Format": 0,
+        "Name": "password_hash",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": 259
+      },
+      {
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "Format": 0,
+        "Name": "roles",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": 54
+      },
+      {
+        "DataTypeOID": 1114,
+        "DataTypeSize": 8,
+        "Format": 0,
+        "Name": "updated_at",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": -1
+      },
+      {
+        "DataTypeOID": 1043,
+        "DataTypeSize": -1,
+        "Format": 0,
+        "Name": "username",
+        "TableAttributeNumber": 0,
+        "TableOID": 0,
+        "TypeModifier": 54
+      }
+    ],
+    "ParamOIDs": [
+      25,
+      25
+    ],
+    "SQL": "SELECT u.id, u.created_at, u.email, u.password_hash, u.roles, u.updated_at, u.username\nFROM user_service.users AS u\nWHERE u.username = $1 OR u.email = $2\nLIMIT 1"
+  }
+}

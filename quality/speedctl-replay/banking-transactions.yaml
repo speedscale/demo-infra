@@ -5,9 +5,11 @@ snapshotID: 3b3bc298-0f5d-456c-ae1d-20f1ad2022b8
 devSnapshotID: 03965c2e-40fc-4227-8757-530d598a487a
 stagingSnapshotID: 03965c2e-40fc-4227-8757-530d598a487a
 devProxymockSnapshotID: d77982d8-6804-451a-a61a-5e7dc385c64c
-testConfigID: banking-daily-replay
+testConfigID: banking-transactions-regression
 service: banking-transactions
 servicePort: 80
 localPort: 18080
 proxymockTarget: http://localhost:18080
 proxymockReadinessPath: /api/transactions
+cloudRegressionTransform: banking-transactions-replay
+cloudRegressionVerifyGenerated: transactions

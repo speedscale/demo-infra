@@ -1,0 +1,115 @@
+{
+  "id": "banking-jwt-resign",
+  "name": "banking-jwt-resign",
+  "generator": [
+    {
+      "filters": {
+        "filters": [
+          {
+            "include": true,
+            "direction": "IN"
+          }
+        ]
+      },
+      "extractor": {
+        "type": "http_req_header",
+        "config": {
+          "name": "Authorization"
+        }
+      },
+      "transforms": [
+        {
+          "type": "jwt_resign",
+          "config": {
+            "secretPath": "${{secret:banking-jwt-secret/secret}}"
+          }
+        }
+      ]
+    }
+  ],
+  "generatorExpectedEnvironment": {
+    "secrets": [
+      "${{secret:banking-jwt-secret/secret}}"
+    ]
+  },
+  "responder": [
+    {
+      "extractor": {
+        "type": "sql_query"
+      },
+      "transforms": [
+        {
+          "type": "sql_key_params",
+          "config": {
+            "exclude": ""
+          }
+        }
+      ]
+    },
+    {
+      "filters": {
+        "filters": [
+          {
+            "include": true,
+            "operator": "EQUAL",
+            "database": {
+              "field": "DATABASE_FIELD_OPERATION",
+              "value": "INSERT"
+            }
+          },
+          {
+            "include": true,
+            "operator": "CONTAINS",
+            "database": {
+              "field": "DATABASE_FIELD_TABLE",
+              "value": "accounts_service.accounts"
+            }
+          }
+        ]
+      },
+      "extractor": {
+        "type": "sql_query"
+      },
+      "transforms": [
+        {
+          "type": "delete_sig",
+          "config": {
+            "key": "postgres:param:1"
+          }
+        }
+      ]
+    },
+    {
+      "extractor": {
+        "type": "json_path",
+        "config": {
+          "path": "postgres.request.bind.resultFormatCodes"
+        }
+      },
+      "transforms": [
+        {
+          "type": "store_sig",
+          "config": {
+            "key": "postgres_result_formats"
+          }
+        }
+      ]
+    },
+    {
+      "extractor": {
+        "type": "json_path",
+        "config": {
+          "path": "postgres.request.execute.bindRequest.resultFormatCodes"
+        }
+      },
+      "transforms": [
+        {
+          "type": "store_sig",
+          "config": {
+            "key": "postgres_result_formats"
+          }
+        }
+      ]
+    }
+  ]
+}

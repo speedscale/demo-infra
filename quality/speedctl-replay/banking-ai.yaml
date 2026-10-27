@@ -10,3 +10,4 @@ service: banking-ai
 servicePort: 8080
 localPort: 18080
 proxymockTarget: http://localhost:18080
+cloudRegressionSnapshotID: 63d35a86-2f5b-4f25-a0df-e4dc814275af

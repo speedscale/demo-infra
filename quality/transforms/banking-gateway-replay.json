@@ -1,0 +1,72 @@
+{
+  "id": "banking-jwt-resign",
+  "name": "banking-jwt-resign",
+  "generator": [
+    {
+      "filters": {
+        "filters": [
+          {
+            "include": true,
+            "direction": "IN"
+          }
+        ]
+      },
+      "extractor": {
+        "type": "http_req_header",
+        "config": {
+          "name": "Authorization"
+        }
+      },
+      "transforms": [
+        {
+          "type": "jwt_resign",
+          "config": {
+            "secretPath": "${{secret:banking-jwt-secret/secret}}"
+          }
+        }
+      ]
+    }
+  ],
+  "generatorExpectedEnvironment": {
+    "secrets": [
+      "${{secret:banking-jwt-secret/secret}}"
+    ]
+  },
+  "responder": [
+    {
+      "filters": {
+        "filters": [
+          {
+            "include": true,
+            "direction": "OUT"
+          },
+          {
+            "operator": "REGEX",
+            "network_address": "^banking-(accounts|user)(:|\\.)",
+            "include": true
+          }
+        ]
+      },
+      "extractor": {
+        "type": "http_req_header",
+        "config": {
+          "name": "Authorization"
+        }
+      },
+      "transforms": [
+        {
+          "type": "jwt_claim",
+          "config": {
+            "claim": "sub"
+          }
+        },
+        {
+          "type": "store_sig",
+          "config": {
+            "key": "banking_user"
+          }
+        }
+      ]
+    }
+  ]
+}

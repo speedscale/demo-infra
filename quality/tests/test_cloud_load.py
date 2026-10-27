@@ -17,13 +17,13 @@ class CloudLoadTest(unittest.TestCase):
             quality = root / 'quality'
             scripts = quality / 'scripts'
             scripts.mkdir(parents=True)
-            for name in ('run-replay.sh', 'run-cloud-load.sh', 'check-replay-released.sh', 'validate-cloud-load-report.py'):
+            for name in ('run-replay.sh', 'run-cloud-load.sh', 'check-replay-released.sh', 'validate-cloud-load-report.py', 'validate-replay-snapshot.py'):
                 shutil.copy(QUALITY / 'scripts' / name, scripts)
             for name in ('connect-cluster.sh', 'check-speedscale-certs.sh'):
                 p = scripts / name
                 p.write_text('#!/usr/bin/env bash\nexit 0\n')
                 p.chmod(0o755)
-            for name in ('speedctl-replay', 'cloud-load'):
+            for name in ('speedctl-replay', 'cloud-load', 'transforms'):
                 shutil.copytree(QUALITY / name, quality / name)
             kubectl = root / 'kubectl'
             kubectl.write_text('#!/usr/bin/env python3\nimport json, os, sys\nif os.environ[\'BLOCKED\'] == \'true\': print(\'{}\')\nelif \'deployments\' in sys.argv:\n print(json.dumps({\'items\':[{\'metadata\':{\'name\':\'banking-\'+name,\'generation\':1,\'labels\':{}},\'spec\':{\'replicas\':1},\'status\':{\'observedGeneration\':1,\'updatedReplicas\':1,\'readyReplicas\':1,\'replicas\':1}} for name in [\'gateway\',\'fraud\',\'ai\']]}))\nelse: print(\'{"items":[]}\')\n')
@@ -41,7 +41,8 @@ elif a[:2] == ['get','test-config']:
     profile=a[2].removeprefix('banking-cloud-load-')
     print((Path(os.environ['CFG_DIR'])/(profile+'.json')).read_text())
 elif a[:2] == ['get','snapshot']:
-    print(json.dumps({'tokenConfigId':'banking-jwt-resign','tokenizerConfig':{'id':'banking-jwt-resign','generator':[{'transforms':[{'type':'jwt_resign'}]}],'generatorExpectedEnvironment':{'secrets':['fixture']}},'outTraffic':[]}))
+    config=json.loads((Path(os.environ['CFG_DIR']).parent/'transforms/banking-jwt-resign.json').read_text())
+    print(json.dumps({'status':'Complete','tokenConfigId':'banking-jwt-resign','tokenizerConfig':config,'outTraffic':[]}))
 elif a[:3] == ['get','report','latencytable']:
     print(json.dumps({'total':{'count':100,'p95':20}}))
 elif a[:2] == ['get','report']:

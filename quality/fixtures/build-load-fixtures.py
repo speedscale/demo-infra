@@ -4,6 +4,7 @@ import argparse
 import base64
 from datetime import datetime, timedelta, timezone
 import json
+from http import HTTPStatus
 from pathlib import Path
 import uuid
 from urllib.parse import parse_qs, urlsplit
@@ -24,7 +25,7 @@ def pair(service, direction, host, port, method, uri, request, response, status=
             'req': {'url': uri.split('?')[0], 'uri': uri, 'host': host, 'method': method,
                     'version': 'HTTP/1.1', 'headers': {'Content-Type': ['application/json']},
                     'bodyBase64': body(request), 'queryParams': parse_qs(urlsplit(uri).query, keep_blank_values=True)},
-            'res': {'statusCode': status, 'statusMessage': 'OK' if status == 200 else 'Unauthorized',
+            'res': {'statusCode': status, 'statusMessage': HTTPStatus(status).phrase,
                     'contentType': 'application/json', 'headers': {'Content-Type': ['application/json']},
                     'bodyBase64': body(response)},
         },
@@ -34,7 +35,7 @@ def pair(service, direction, host, port, method, uri, request, response, status=
     }
 
 
-def ai_pairs():
+def ai_pairs(cases=None):
     system = "You are a helpful banking assistant for Apex Banking. Answer questions about the user's accounts and transactions. Be concise and professional."
     providers = [
         ('anthropic', 'Anthropic Claude', 'claude-sonnet-4-20250514', 'api.anthropic.com', '/v1/messages'),
@@ -44,8 +45,11 @@ def ai_pairs():
         ('openrouter', 'OpenRouter Mistral', 'mistralai/mistral-small-3.2-24b-instruct', 'openrouter.ai', '/api/v1/chat/completions'),
     ]
     pairs = []
-    for question in ['Explain compound interest.', 'Explain card security.', 'Explain a savings account.']:
-        content = 'User locale: en-US. Respond in the language and conventions for this locale.\n\n' + question
+    if cases is None:
+        cases = [(q, 'en-US', '') for q in ['Explain compound interest.', 'Explain card security.', 'Explain a savings account.']]
+    for question, locale, context in cases:
+        instruction = f'User locale: {locale}. Respond in the language and conventions for this locale.'
+        content = (context + '\n' if context else '') + instruction + '\n\n' + question
         results = []
         for provider, name, model, host, uri in providers:
             text = f'Demo {provider} response: {question}'
@@ -61,7 +65,7 @@ def ai_pairs():
             pairs.append(pair('banking-ai', 'OUT', host, 443, 'POST', uri, request, response))
             results.append({'provider': provider, 'name': name, 'model': model, 'message': text, 'error': None, 'durationMs': 0})
         pairs.append(pair('banking-ai', 'IN', 'banking-ai', 8080, 'POST', '/api/chat',
-                          {'message': question, 'locale': 'en-US'}, {'results': results}))
+                          dict(message=question, locale=locale, **({'accountContext': context} if context else {})), {'results': results}))
     return pairs
 
 
