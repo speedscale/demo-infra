@@ -147,8 +147,8 @@ def grpc_check(f, account_id, user_id, amount, kind, approved=True):
     for mcc in (["6011"] if kind != "TRANSFER" else ["5411", "5812", "5912", "5732", "7995", "5999", "5541"]):
         request = text(1, account_id) + text(2, user_id) + b"\x19" + struct.pack("<d", amount) + text(4, kind) + text(5, mcc)
         response = (b"\x08\x01" if approved else b"") + text(3, "Synthetic approved" if approved else "Synthetic rejected")
-        pair = f.dependency("banking-fraud:50051", "POST", "/fraud.v1.FraudChecker/CheckTransaction", None, None)
-        pair["netinfo"]["upstream"].update(hostname="banking-fraud", port=50051)
+        pair = f.dependency("banking-fraud:8080", "POST", "/fraud.v1.FraudChecker/CheckTransaction", None, None)
+        pair["netinfo"]["upstream"].update(hostname="banking-fraud", port=8080)
         pair.update(tech="gRPC")
         for message, payload in [(pair["http"]["req"], request), (pair["http"]["res"], response)]:
             message["bodyBase64"] = base64.b64encode(b"\0" + struct.pack(">I", len(payload)) + payload).decode()
