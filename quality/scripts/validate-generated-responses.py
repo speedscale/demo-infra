@@ -49,14 +49,34 @@ def validate(pairs, service):
     return checked
 
 
+def validate_sql_matches(pairs, service):
+    checked = 0
+    table = service + "_service." + service
+    for pair in pairs:
+        execute = pair.get("postgres", {}).get("request", {}).get("execute", {})
+        query = execute.get("bindRequest", {}).get("parseRequest", {}).get("query", "").lower()
+        if pair.get("direction") != "OUT" or table not in query:
+            continue
+        tags = pair.get("tags", {})
+        if tags.get("matchTier") or not tags.get("refUuid"):
+            raise ValueError("business SQL did not use an exact recorded match")
+        checked += 1
+    if not checked:
+        raise ValueError("no exact business SQL evidence was recorded")
+    return checked
+
+
 def main():
     try:
         with Path(sys.argv[1]).open() as source:
             count = validate((json.loads(line) for line in source if line.strip()), sys.argv[2])
+        with Path(sys.argv[1]).open() as source:
+            sql_count = validate_sql_matches((json.loads(line) for line in source if line.strip()), sys.argv[2])
     except (ValueError, KeyError, TypeError, OSError, IndexError):
         print("Generated response verification failed", file=sys.stderr)
         return 1
     print(f"Verified generated fields for {count} {sys.argv[2]} writes")
+    print(f"Verified {sql_count} exact business SQL matches")
     return 0
 
 

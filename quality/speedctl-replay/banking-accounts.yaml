@@ -12,3 +12,4 @@ localPort: 18080
 proxymockTarget: http://localhost:18080
 cloudRegressionTransform: banking-accounts-replay
 cloudRegressionVerifyGenerated: accounts
+cloudRegressionSnapshotID: 3d108e85-e527-4a79-af20-7a4fa7410814

@@ -13,3 +13,4 @@ proxymockTarget: http://localhost:18080
 proxymockReadinessPath: /api/transactions
 cloudRegressionTransform: banking-transactions-replay
 cloudRegressionVerifyGenerated: transactions
+cloudRegressionSnapshotID: dd903669-8f8c-464b-a1f4-1703ed593ff0

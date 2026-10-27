@@ -111,11 +111,15 @@ def notification_pairs():
     return pairs
 
 
+spec = importlib.util.spec_from_file_location("database_fixtures", Path(__file__).with_name("build-database-fixtures.py"))
+database = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(database)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("destination", type=Path)
     args = parser.parse_args()
-    for name, pairs in [("ai", ai_pairs()), ("notification", notification_pairs()), ("gateway", gateway_pairs())]:
+    for name, pairs in [("ai", ai_pairs()), ("notification", notification_pairs()), ("gateway", gateway_pairs()), ("accounts", database.accounts_pairs()), ("transactions", database.transactions_pairs())]:
         directory = args.destination / name
         directory.mkdir(parents=True, exist_ok=True)
         start = datetime.now(timezone.utc) - timedelta(seconds=len(pairs))

@@ -38,3 +38,44 @@ class RegressionFixtureTests(unittest.TestCase):
         self.assertTrue(any(b.get("accountContext") for b in bodies))
         self.assertTrue(any(b.get("locale") == "es-ES" for b in bodies))
         self.assertTrue(any(r["http"]["res"]["statusCode"] == 422 for r in inbound))
+
+class DatabaseContractTests(unittest.TestCase):
+    def test_account_contracts_cover_users_types_writes_and_errors(self):
+        pairs = module.database.accounts_pairs()
+        inbound = [p for p in pairs if p["direction"] == "IN"]
+        self.assertEqual(53, len(inbound))
+        self.assertEqual({200, 201, 404, 500}, {p["http"]["res"]["statusCode"] for p in inbound})
+        creates = [p for p in inbound if p["http"]["req"]["method"] == "POST"]
+        bodies = [json.loads(base64.b64decode(p["http"]["req"]["bodyBase64"])) for p in creates]
+        self.assertEqual({"CHECKING", "SAVINGS", "CREDIT"}, {p["accountType"] for p in bodies})
+        self.assertEqual(9, len(creates))
+        for p in inbound:
+            r = p["http"]["req"]
+            if r["method"] == "GET" and r["url"] == "/api/accounts" and p["http"]["res"]["statusCode"] == 200:
+                self.assertIsInstance(json.loads(base64.b64decode(p["http"]["res"]["bodyBase64"])), list)
+
+    def test_transactions_cover_success_and_real_rejection_paths(self):
+        pairs = module.database.transactions_pairs()
+        inbound = [p for p in pairs if p["direction"] == "IN"]
+        self.assertEqual(33, len(inbound))
+        self.assertEqual({200, 201, 400, 500}, {p["http"]["res"]["statusCode"] for p in inbound})
+        self.assertEqual(18, sum(p["http"]["res"]["statusCode"] == 201 for p in inbound))
+        for route in ["deposit", "withdraw", "transfer", "create"]:
+            self.assertTrue(any(p["location"] == "/api/transactions/" + route for p in inbound))
+        keys = {p["kafka"]["request"]["apiKey"] for p in pairs if "kafka" in p}
+        self.assertEqual({"KAFKA_API_KEY_API_VERSIONS", "KAFKA_API_KEY_METADATA", "KAFKA_API_KEY_INIT_PRODUCER_ID", "KAFKA_API_KEY_PRODUCE"}, keys)
+        self.assertTrue(any(p.get("http", {}).get("res", {}).get("trailers", {}).get("Grpc-Status") == ["0"] for p in pairs))
+
+    def test_database_rows_have_types_and_consistent_shapes(self):
+        for builder in [module.database.accounts_pairs, module.database.transactions_pairs]:
+            for pair in builder():
+                pg = pair.get("postgres", {})
+                execute = pg.get("request", {}).get("execute")
+                if not execute:
+                    continue
+                bind = execute["bindRequest"]
+                fields = bind["parseRequest"]["describedRow"]["fields"]
+                for message in pg.get("response", {}).get("execute", {}).get("messages", []):
+                    if "dataRow" in message:
+                        self.assertEqual(len(fields), len(message["dataRow"]["values"]))
+                        self.assertTrue(all(field["dataTypeOid"] for field in fields))

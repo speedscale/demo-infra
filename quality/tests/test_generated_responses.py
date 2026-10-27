@@ -40,3 +40,17 @@ class GeneratedResponseTests(unittest.TestCase):
         item["http"]["res"]["bodyBase64"] = base64.b64encode(json.dumps(body).encode()).decode()
         with self.assertRaises(ValueError):
             module.validate([item], "accounts")
+
+class BusinessSQLTests(unittest.TestCase):
+    def pair(self):
+        return {"direction": "OUT", "tags": {"refUuid": "recorded"}, "postgres": {"request": {"execute": {"bindRequest": {"parseRequest": {"query": "select id from accounts_service.accounts where user_id=$1"}}}}}}
+
+    def test_requires_exact_business_matches(self):
+        self.assertEqual(1, module.validate_sql_matches([self.pair()], "accounts"))
+        for tags in [{"refUuid": "recorded", "matchTier": "fingerprint"}, {}]:
+            pair = self.pair()
+            pair["tags"] = tags
+            with self.assertRaises(ValueError):
+                module.validate_sql_matches([pair], "accounts")
+        with self.assertRaises(ValueError):
+            module.validate_sql_matches([], "accounts")

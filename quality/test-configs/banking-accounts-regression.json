@@ -17,7 +17,7 @@
     {
       "metricName": "passAssertPct",
       "type": "TOO_LOW",
-      "value": 98,
+      "value": 100,
       "action": "ALERT"
     },
     {
@@ -29,7 +29,7 @@
     {
       "metricName": "totalTransactionCount",
       "type": "TOO_LOW",
-      "value": 1,
+      "value": 53,
       "action": "ALERT"
     },
     {

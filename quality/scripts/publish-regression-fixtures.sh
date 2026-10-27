@@ -32,7 +32,7 @@ for test_config in banking-daily-replay banking-gateway-regression banking-user-
   sctl put test-config "$root/test-configs/$test_config.json"
 done
 python3 "$root/fixtures/build-regression-fixtures.py" "$work/fixtures"
-for definition in ai:63d35a86-2f5b-4f25-a0df-e4dc814275af notification:17dce184-7b75-49fd-bab2-9abb729ab96a gateway:66a84b94-f270-4b02-8dab-0840a6a6a6ac; do
+for definition in ai:63d35a86-2f5b-4f25-a0df-e4dc814275af notification:17dce184-7b75-49fd-bab2-9abb729ab96a gateway:66a84b94-f270-4b02-8dab-0840a6a6a6ac accounts:3d108e85-e527-4a79-af20-7a4fa7410814 transactions:dd903669-8f8c-464b-a1f4-1703ed593ff0; do
   service=${definition%%:*}
   id=${definition#*:}
   proxymock --config "$config_file" cloud push snapshot --in "$work/fixtures/$service" --id "$id" --name "banking-$service-regression-contract" --force
