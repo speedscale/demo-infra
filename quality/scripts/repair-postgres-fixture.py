@@ -30,7 +30,29 @@ def invalid_response(pair):
     return None
 
 
-def setup_pairs(pair, metadata):
+def row_fields(description, formats=()):
+    fields = []
+    for index, field in enumerate(description.get("Fields") or []):
+        fields.append({"name": field["Name"], "tableOid": field["TableOID"],
+                       "tableAttributeNumber": field["TableAttributeNumber"], "dataTypeOid": field["DataTypeOID"],
+                       "dataTypeSize": field["DataTypeSize"] % (1 << 32), "typeModifier": field["TypeModifier"],
+                       "format": formats[0] if len(formats) == 1 else formats[index] if formats else 0})
+    return fields
+
+
+def with_statement_metadata(pair, metadata):
+    if pair.get("direction") != "OUT" or "postgres" not in pair:
+        return pair
+    pair = copy.deepcopy(pair)
+    request = pair["postgres"].get("request", {})
+    parse = request.get("parse") or request.get("describe", {}).get("parseRequest") or request.get("bind", {}).get("parseRequest") or request.get("execute", {}).get("bindRequest", {}).get("parseRequest")
+    if parse and (description := metadata.get(parse.get("query", ""))) and "error" not in description:
+        parse["describedParameterOids"] = description.get("ParamOIDs") or []
+        parse["describedRow"] = {"fields": row_fields(description)}
+    return pair
+
+
+def setup_pairs(pair, metadata, describe_statement=False):
     pg = pair.get("postgres", {})
     bind = pg.get("request", {}).get("execute", {}).get("bindRequest")
     messages = pg.get("response", {}).get("execute", {}).get("messages", [])
@@ -41,20 +63,20 @@ def setup_pairs(pair, metadata):
     if not description or "error" in description:
         return []
     formats = bind.get("resultFormatCodes", [])
-    fields = []
-    for index, field in enumerate(description.get("Fields") or []):
-        fields.append({"name": field["Name"], "tableOid": field["TableOID"],
-                       "tableAttributeNumber": field["TableAttributeNumber"], "dataTypeOid": field["DataTypeOID"],
-                       "dataTypeSize": field["DataTypeSize"] % (1 << 32), "typeModifier": field["TypeModifier"],
-                       "format": formats[0] if len(formats) == 1 else formats[index] if formats else 0})
+    fields = row_fields(description, formats)
     replies = [("parse", parse, {"complete": {}}),
                ("bind", bind, {"complete": {}}),
                ("describe", {"objectType": "OBJECT_TYPE_PORTAL", "name": bind.get("portal", ""), "parseRequest": parse},
                 {"messages": [{"rowDescription": {"fields": fields}}] if fields else [{"noData": {}}]})]
+    if describe_statement:
+        statement_fields = [dict(field, format=0) for field in fields]
+        replies.append(("describe", {"objectType": "OBJECT_TYPE_PREPARED_STATEMENT", "name": parse.get("name", ""), "parseRequest": parse},
+                        {"messages": [{"parameterDescription": {"parameterOids": description.get("ParamOIDs") or []}},
+                                      {"rowDescription": {"fields": statement_fields}} if fields else {"noData": {}}]}))
     result = []
     for command, request, response in replies:
         rr = copy.deepcopy(pair)
-        rr["uuid"] = base64.b64encode(uuid.uuid5(uuid.NAMESPACE_URL, pair["uuid"] + "/" + command).bytes).decode()
+        rr["uuid"] = base64.b64encode(uuid.uuid5(uuid.NAMESPACE_URL, pair["uuid"] + "/" + command + ("-statement" if request.get("objectType") == "OBJECT_TYPE_PREPARED_STATEMENT" else "")).bytes).decode()
         rr["postgres"] = {"request": {command: copy.deepcopy(request)}, "response": {command: response}}
         rr.pop("signature", None)
         rr.setdefault("tags", {})["source"] = "repaired-protocol-metadata"
@@ -67,6 +89,8 @@ def repair(pairs, catalog=None, metadata=None, replace_setup=False):
     for pair in pairs:
         if pair.get("tags", {}).get("source") == "repaired-protocol-metadata":
             continue
+        if metadata and replace_setup:
+            pair = with_statement_metadata(pair, metadata)
         pg = pair.get("postgres", {})
         request = pg.get("request", {})
         if replace_setup and pair.get("direction") == "OUT":
@@ -99,7 +123,9 @@ def repair(pairs, catalog=None, metadata=None, replace_setup=False):
         else:
             repaired.append(pair)
     if metadata:
-        setup = [r for pair in repaired for r in setup_pairs(pair, metadata)]
+        setup = [r for pair in repaired for r in setup_pairs(pair, metadata, replace_setup)]
+        if replace_setup:
+            setup = list({json.dumps(r["postgres"], sort_keys=True): r for r in setup}.values())
         repaired.extend(setup)
     if catalog:
         catalog = copy.deepcopy(catalog)

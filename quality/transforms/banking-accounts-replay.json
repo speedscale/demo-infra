@@ -78,38 +78,6 @@
           }
         }
       ]
-    },
-    {
-      "extractor": {
-        "type": "json_path",
-        "config": {
-          "path": "postgres.request.bind.resultFormatCodes"
-        }
-      },
-      "transforms": [
-        {
-          "type": "store_sig",
-          "config": {
-            "key": "postgres_result_formats"
-          }
-        }
-      ]
-    },
-    {
-      "extractor": {
-        "type": "json_path",
-        "config": {
-          "path": "postgres.request.execute.bindRequest.resultFormatCodes"
-        }
-      },
-      "transforms": [
-        {
-          "type": "store_sig",
-          "config": {
-            "key": "postgres_result_formats"
-          }
-        }
-      ]
     }
   ]
 }

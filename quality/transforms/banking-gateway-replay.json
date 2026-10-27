@@ -42,7 +42,7 @@
           },
           {
             "operator": "REGEX",
-            "network_address": "^banking-(accounts|user)(:|\\.)",
+            "network_address": "^banking-(accounts|user|transactions)(:|\\.)",
             "include": true
           }
         ]

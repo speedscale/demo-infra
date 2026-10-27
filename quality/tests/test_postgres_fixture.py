@@ -50,7 +50,7 @@ class PostgresFixtureTests(unittest.TestCase):
         repaired, _ = module.repair([execute], metadata=metadata)
         self.assertEqual(4, len(repaired))
         self.assertEqual(repaired, module.repair(repaired, metadata=metadata)[0])
-        self.assertEqual(execute, repaired[0])
+        self.assertEqual(execute["postgres"]["response"], repaired[0]["postgres"]["response"])
         describe = repaired[-1]["postgres"]["response"]["describe"]["messages"][0]["rowDescription"]
         self.assertEqual(1, describe["fields"][0]["format"])
 
@@ -64,6 +64,9 @@ class PostgresFixtureTests(unittest.TestCase):
         inbound = {"direction": "IN", "uuid": "inbound"}
         metadata = {query: {"Fields": [{"Name": "id", "TableOID": 0, "TableAttributeNumber": 0, "DataTypeOID": 20, "DataTypeSize": 8, "TypeModifier": -1}]}}
         repaired, removed = module.repair([inbound, good, bad], metadata=metadata, replace_setup=True)
-        self.assertEqual([inbound, good], repaired[:2])
+        self.assertEqual(inbound, repaired[0])
+        self.assertEqual(good["postgres"]["response"], repaired[1]["postgres"]["response"])
         self.assertEqual(1, removed["row width differs from schema"])
+        self.assertEqual(20, repaired[1]["postgres"]["request"]["execute"]["bindRequest"]["parseRequest"]["describedRow"]["fields"][0]["dataTypeOid"])
+        self.assertTrue(any(r.get("postgres", {}).get("request", {}).get("describe", {}).get("objectType") == "OBJECT_TYPE_PREPARED_STATEMENT" for r in repaired))
         self.assertEqual(repaired, module.repair(repaired, metadata=metadata, replace_setup=True)[0])

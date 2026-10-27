@@ -28,11 +28,11 @@ wait_snapshot() {
 for transform in banking-jwt-resign; do
   sctl put transform "$root/transforms/$transform.json"
 done
-for test_config in banking-daily-replay banking-user-regression banking-accounts-regression banking-transactions-regression banking-notification-regression; do
+for test_config in banking-daily-replay banking-gateway-regression banking-user-regression banking-accounts-regression banking-transactions-regression banking-notification-regression; do
   sctl put test-config "$root/test-configs/$test_config.json"
 done
 python3 "$root/fixtures/build-regression-fixtures.py" "$work/fixtures"
-for definition in ai:63d35a86-2f5b-4f25-a0df-e4dc814275af notification:17dce184-7b75-49fd-bab2-9abb729ab96a; do
+for definition in ai:63d35a86-2f5b-4f25-a0df-e4dc814275af notification:17dce184-7b75-49fd-bab2-9abb729ab96a gateway:66a84b94-f270-4b02-8dab-0840a6a6a6ac; do
   service=${definition%%:*}
   id=${definition#*:}
   proxymock --config "$config_file" cloud push snapshot --in "$work/fixtures/$service" --id "$id" --name "banking-$service-regression-contract" --force

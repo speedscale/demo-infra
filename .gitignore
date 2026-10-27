@@ -3,3 +3,5 @@
 *.swo
 *~
 thoughts/
+quality/replay-reports/
+quality/**/__pycache__/

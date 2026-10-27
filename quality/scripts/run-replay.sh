@@ -277,7 +277,7 @@ wait_for_replay() {
         MISSED_GOALS)
           error "  $name: replay goals missed"
           jq -r '.report.goals[]? | select(.status == "FAIL") |
-            "    " + .command + ": expected " + .expected + ", observed " + .actual' <<< "$report"
+            "    \(.command): expected \(.expected), observed \(.actual)"' <<< "$report"
           jq -r '.report.replayEvents[]? | select(.severity == "RES_ERROR" or .severity == "RES_FATAL") |
             "    " + .reason + ": " + .description' <<< "$report"
           return 1
@@ -488,7 +488,7 @@ for f in "${replay_files[@]}"; do
   else
     replay_statuses["$name"]="failed"
   fi
-  if [ -n "${REPLAY_RELEASE_FILE:-}" ] && [ ! -f "$REPLAY_RELEASE_FILE" ]; then
+  if [ -z "$CLOUD_LOAD_PROFILE" ] || { [ -n "${REPLAY_RELEASE_FILE:-}" ] && [ ! -f "$REPLAY_RELEASE_FILE" ]; }; then
     release_start=$(date +%s)
     release_confirmed=true
     while ! "$SCRIPT_DIR/check-replay-released.sh" "$namespace" "$workload"; do
@@ -500,7 +500,8 @@ for f in "${replay_files[@]}"; do
       fi
       sleep "${REPLAY_CHECK_INTERVAL:-10}"
     done
-    if [ "$release_confirmed" = true ]; then touch "$REPLAY_RELEASE_FILE"; fi
+    if [ "$release_confirmed" != true ]; then break; fi
+    if [ -n "${REPLAY_RELEASE_FILE:-}" ]; then touch "$REPLAY_RELEASE_FILE"; fi
   fi
 done
 

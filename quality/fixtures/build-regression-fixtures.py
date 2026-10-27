@@ -22,6 +22,49 @@ def ai_pairs():
     return pairs
 
 
+def gateway_pairs():
+    import base64
+    import hashlib
+    import hmac
+
+    def bearer(username, user_id):
+        def encode(value):
+            return base64.urlsafe_b64encode(json.dumps(value, separators=(",", ":")).encode()).decode().rstrip("=")
+        unsigned = encode({"alg": "HS256", "typ": "JWT"}) + "." + encode({"sub": username, "userId": str(user_id), "roles": "USER", "exp": 1893456000})
+        signature = base64.urlsafe_b64encode(hmac.new(b"public-synthetic-gateway-fixture-key", unsigned.encode(), hashlib.sha256).digest()).decode().rstrip("=")
+        return "Bearer " + unsigned + "." + signature
+
+    pairs = fixtures.gateway_pairs()
+    def route(host, method, uri, request, response, status=200, identity=None):
+        for direction, target, port in [("OUT", host, 80), ("IN", "banking-gateway", 8080)]:
+            rr = fixtures.pair("banking-gateway", direction, target, port, method, uri, request, response, status)
+            if identity:
+                rr["http"]["req"]["headers"]["Authorization"] = [bearer(*identity)]
+            pairs.append(rr)
+
+    for index, name in enumerate(["alpha", "beta"]):
+        uid, account_id, transaction_id = 91001 + index, 92001 + index, 93001 + index
+        identity = ("gateway-fixture-" + name, uid)
+        profile = {"id": uid, "username": identity[0], "email": name + "@example.invalid", "roles": "USER"}
+        account = {"id": account_id, "userId": uid, "accountNumber": str(100000000001 + index), "accountType": "SAVINGS", "balance": 125.5}
+        transaction = {"id": transaction_id, "userId": uid, "fromAccountId": account_id, "toAccountId": None, "amount": 25.5, "type": "DEPOSIT", "status": "COMPLETED"}
+        route("banking-user", "GET", "/api/users/profile", None, profile, identity=identity)
+        route("banking-accounts", "GET", "/api/accounts", None, [account], identity=identity)
+        route("banking-accounts", "GET", f"/api/accounts/{account_id}", None, account, identity=identity)
+        route("banking-transactions", "GET", "/api/transactions", None, [transaction], identity=identity)
+        for operation in ["create", "deposit", "withdraw", "transfer"]:
+            request = {"fromAccountId": account_id, "toAccountId": 92003, "amount": 25.5, "type": operation.upper(), "description": "synthetic gateway regression"}
+            response = dict(transaction, type=operation.upper())
+            route("banking-transactions", "POST", "/api/transactions/" + operation, request, response, 201, identity)
+    route("banking-user", "GET", "/api/users/profile", None, {"error": "Synthetic dependency unavailable"}, 503, ("gateway-fixture-unavailable", 91999))
+    route("banking-accounts", "GET", "/api/accounts/999999", None, {"error": "Account not found"}, 404, ("gateway-fixture-alpha", 91001))
+    route("banking-transactions", "POST", "/api/transactions/create", {"amount": -1}, {"error": "Invalid transaction amount"}, 400, ("gateway-fixture-alpha", 91001))
+    for service in ["user", "accounts", "transactions"]:
+        pairs.append(fixtures.pair("banking-gateway", "OUT", "banking-" + service, 80, "GET", "/actuator/health", None, {"status": "UP"}))
+        pairs.append(fixtures.pair("banking-gateway", "IN", "banking-gateway", 8080, "GET", "/api/" + service + "-service/health", None, {"status": "UP"}))
+    return pairs
+
+
 def notification_pairs():
     import base64
     from urllib.parse import urlencode
@@ -72,7 +115,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("destination", type=Path)
     args = parser.parse_args()
-    for name, pairs in [("ai", ai_pairs()), ("notification", notification_pairs())]:
+    for name, pairs in [("ai", ai_pairs()), ("notification", notification_pairs()), ("gateway", gateway_pairs())]:
         directory = args.destination / name
         directory.mkdir(parents=True, exist_ok=True)
         start = datetime.now(timezone.utc) - timedelta(seconds=len(pairs))
