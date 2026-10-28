@@ -1,0 +1,4322 @@
+{
+  "msgType": "rrpair",
+  "resource": "banking-user",
+  "ts": "2026-10-27T14:50:41.636016Z",
+  "l7protocol": "postgres",
+  "duration": 61,
+  "elapsed": "0.061745s",
+  "tags": {
+    "source": "synthetic-catalog",
+    "proxyLocation": "out",
+    "k8sAppLabel": "banking-user",
+    "k8sClusterName": "dev-decoy",
+    "k8sAppPodNamespace": "banking-replay"
+  },
+  "uuid": "kZGRkZGRQZGRkZGRkZGRkQ==",
+  "direction": "OUT",
+  "cluster": "dev-decoy",
+  "namespace": "banking-replay",
+  "service": "banking-user",
+  "command": "Query",
+  "location": "SELECT version(); SELECT ns.nspname, t.oid, t.typname, t.typtype, t.typnotnull, t.elemtypoid FROM (SELECT typ.oid, typ.typnamespace, typ.typname, typ.typtype, typ.typrelid, typ.typnotnull, typ.relkind, elemtyp.oid AS elemtypoid, elemtyp.typname AS elemtypname, elemcls.relkind AS elemrelkind, CASE WHEN elemproc.proname = 'array_recv' THEN 'a' ELSE elemtyp.typtype END AS elemtyptype FROM (SELECT typ.oid, typnamespace, typname, typrelid, typnotnull, relkind, typelem AS elemoid, CASE WHEN proc . proname = 'array_recv' THEN 'a' ELSE typ.typtype END AS typtype, CASE WHEN proc . proname = 'array_recv' THEN typ.typelem WHEN typ.typtype = 'r' THEN rngsubtype WHEN typ.typtype = 'm' THEN (SELECT rngtypid FROM pg_range WHERE rngmultitypid = typ.oid) WHEN typ.typtype = 'd' THEN typ.typbasetype END AS elemtypoid FROM pg_type AS typ LEFT JOIN pg_class AS cls ON (cls.oid = typ.typrelid) LEFT JOIN pg_proc AS proc ON proc . oid = typ.typreceive LEFT JOIN pg_range ON (pg_range.rngtypid = typ.oid)) AS typ LEFT JOIN pg_type AS elemtyp ON elemtyp.oid = elemtypoid LEFT JOIN pg_class AS elemcls ON (elemcls.oid = elemtyp.typrelid) LEFT JOIN pg_proc AS elemproc ON elemproc.oid = elemtyp.typreceive) AS t JOIN pg_namespace AS ns ON (ns.oid = typnamespace) WHERE typtype IN ('b', 'r', 'm', 'e', 'd') OR (typtype = 'c' AND relkind = 'c') OR (typtype = 'p' AND typname IN ('record', 'void', 'unknown')) OR (typtype = 'a' AND (elemtyptype IN ('b', 'r', 'm', 'e', 'd') OR (elemtyptype = 'p' AND elemtypname IN ('record', 'void')) OR (elemtyptype = 'c' AND elemrelkind = 'c'))) ORDER BY CASE WHEN typtype IN ('b', 'e', 'p') THEN 0 WHEN typtype = 'c' THEN 1 WHEN typtype = 'r' THEN 2 WHEN typtype = 'm' THEN 3 WHEN typtype = 'd' AND elemtyptype <> 'a' THEN 4 WHEN typtype = 'a' THEN 5 WHEN typtype = 'd' AND elemtyptype = 'a' THEN 6 END; SELECT typ.oid, att.attname, att.atttypid FROM pg_type AS typ JOIN pg_namespace AS ns ON (ns.oid = typ.typnamespace) JOIN pg_class AS cls ON (cls.oid = typ.typrelid) JOIN pg_attribute AS att ON (att.attrelid = typ.typrelid) WHERE (typ.typtype = 'c' AND cls.relkind = 'c') AND attnum > 0 AND NOT attisdropped ORDER BY typ.oid, att.attnum; SELECT pg_type.oid, enumlabel FROM pg_enum JOIN pg_type ON pg_type.oid = enumtypid ORDER BY oid, enumsortorder;",
+  "status": "OK",
+  "postgres": {
+    "request": {
+      "query": {
+        "query": "SELECT version();\n\nSELECT ns.nspname, t.oid, t.typname, t.typtype, t.typnotnull, t.elemtypoid\nFROM (\n    -- Arrays have typtype=b - this subquery identifies them by their typreceive and converts their typtype to a\n    -- We first do this for the type (innerest-most subquery), and then for its element type\n    -- This also returns the array element, range subtype and domain base type as elemtypoid\n    SELECT\n        typ.oid, typ.typnamespace, typ.typname, typ.typtype, typ.typrelid, typ.typnotnull, typ.relkind,\n        elemtyp.oid AS elemtypoid, elemtyp.typname AS elemtypname, elemcls.relkind AS elemrelkind,\n        CASE WHEN elemproc.proname='array_recv' THEN 'a' ELSE elemtyp.typtype END AS elemtyptype\n    FROM (\n        SELECT typ.oid, typnamespace, typname, typrelid, typnotnull, relkind, typelem AS elemoid,\n            CASE WHEN proc.proname='array_recv' THEN 'a' ELSE typ.typtype END AS typtype,\n            CASE\n                WHEN proc.proname='array_recv' THEN typ.typelem\n                WHEN typ.typtype='r' THEN rngsubtype\n                WHEN typ.typtype='m' THEN (SELECT rngtypid FROM pg_range WHERE rngmultitypid = typ.oid)\n                WHEN typ.typtype='d' THEN typ.typbasetype\n            END AS elemtypoid\n        FROM pg_type AS typ\n        LEFT JOIN pg_class AS cls ON (cls.oid = typ.typrelid)\n        LEFT JOIN pg_proc AS proc ON proc.oid = typ.typreceive\n        LEFT JOIN pg_range ON (pg_range.rngtypid = typ.oid)\n    ) AS typ\n    LEFT JOIN pg_type AS elemtyp ON elemtyp.oid = elemtypoid\n    LEFT JOIN pg_class AS elemcls ON (elemcls.oid = elemtyp.typrelid)\n    LEFT JOIN pg_proc AS elemproc ON elemproc.oid = elemtyp.typreceive\n) AS t\nJOIN pg_namespace AS ns ON (ns.oid = typnamespace)\nWHERE\n    typtype IN ('b', 'r', 'm', 'e', 'd') OR -- Base, range, multirange, enum, domain\n    (typtype = 'c' AND relkind='c') OR -- User-defined free-standing composites (not table composites) by default\n    (typtype = 'p' AND typname IN ('record', 'void', 'unknown')) OR -- Some special supported pseudo-types\n    (typtype = 'a' AND (  -- Array of...\n        elemtyptype IN ('b', 'r', 'm', 'e', 'd') OR -- Array of base, range, multirange, enum, domain\n        (elemtyptype = 'p' AND elemtypname IN ('record', 'void')) OR -- Arrays of special supported pseudo-types\n        (elemtyptype = 'c' AND elemrelkind='c') -- Array of user-defined free-standing composites (not table composites) by default\n    ))\nORDER BY CASE\n       WHEN typtype IN ('b', 'e', 'p') THEN 0           -- First base types, enums, pseudo-types\n       WHEN typtype = 'c' THEN 1                        -- Composites after (fields loaded later in 2nd pass)\n       WHEN typtype = 'r' THEN 2                        -- Ranges after\n       WHEN typtype = 'm' THEN 3                        -- Multiranges after\n       WHEN typtype = 'd' AND elemtyptype <> 'a' THEN 4 -- Domains over non-arrays after\n       WHEN typtype = 'a' THEN 5                        -- Arrays after\n       WHEN typtype = 'd' AND elemtyptype = 'a' THEN 6  -- Domains over arrays last\nEND;\n\n-- Load field definitions for (free-standing) composite types\nSELECT typ.oid, att.attname, att.atttypid\nFROM pg_type AS typ\nJOIN pg_namespace AS ns ON (ns.oid = typ.typnamespace)\nJOIN pg_class AS cls ON (cls.oid = typ.typrelid)\nJOIN pg_attribute AS att ON (att.attrelid = typ.typrelid)\nWHERE\n  (typ.typtype = 'c' AND cls.relkind='c') AND\n  attnum > 0 AND     -- Don't load system attributes\n  NOT attisdropped\nORDER BY typ.oid, att.attnum;\n\n-- Load enum fields\nSELECT pg_type.oid, enumlabel\nFROM pg_enum\nJOIN pg_type ON pg_type.oid=enumtypid\nORDER BY oid, enumsortorder;\n"
+      }
+    },
+    "response": {
+      "query": {
+        "messages": [
+          {
+            "rowDescription": {
+              "fields": [
+                {
+                  "name": "version",
+                  "dataTypeOid": 25,
+                  "dataTypeSize": 4294967295,
+                  "typeModifier": -1
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "PostgreSQL 15.19 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit"
+                }
+              ]
+            }
+          },
+          {
+            "complete": {
+              "tag": "SELECT 1"
+            }
+          },
+          {
+            "rowDescription": {
+              "fields": [
+                {
+                  "name": "nspname",
+                  "tableOid": 2615,
+                  "tableAttributeNumber": 2,
+                  "dataTypeOid": 19,
+                  "dataTypeSize": 64,
+                  "typeModifier": -1
+                },
+                {
+                  "name": "oid",
+                  "tableOid": 1247,
+                  "tableAttributeNumber": 1,
+                  "dataTypeOid": 26,
+                  "dataTypeSize": 4,
+                  "typeModifier": -1
+                },
+                {
+                  "name": "typname",
+                  "tableOid": 1247,
+                  "tableAttributeNumber": 2,
+                  "dataTypeOid": 19,
+                  "dataTypeSize": 64,
+                  "typeModifier": -1
+                },
+                {
+                  "name": "typtype",
+                  "dataTypeOid": 18,
+                  "dataTypeSize": 1,
+                  "typeModifier": -1
+                },
+                {
+                  "name": "typnotnull",
+                  "tableOid": 1247,
+                  "tableAttributeNumber": 25,
+                  "dataTypeOid": 16,
+                  "dataTypeSize": 1,
+                  "typeModifier": -1
+                },
+                {
+                  "name": "elemtypoid",
+                  "tableOid": 1247,
+                  "tableAttributeNumber": 1,
+                  "dataTypeOid": 26,
+                  "dataTypeSize": 4,
+                  "typeModifier": -1
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "700"
+                },
+                {
+                  "asString": "float4"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "23"
+                },
+                {
+                  "asString": "int4"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "24"
+                },
+                {
+                  "asString": "regproc"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "25"
+                },
+                {
+                  "asString": "text"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "26"
+                },
+                {
+                  "asString": "oid"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "27"
+                },
+                {
+                  "asString": "tid"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "28"
+                },
+                {
+                  "asString": "xid"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "29"
+                },
+                {
+                  "asString": "cid"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "30"
+                },
+                {
+                  "asString": "oidvector"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "114"
+                },
+                {
+                  "asString": "json"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "142"
+                },
+                {
+                  "asString": "xml"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "194"
+                },
+                {
+                  "asString": "pg_node_tree"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3361"
+                },
+                {
+                  "asString": "pg_ndistinct"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3402"
+                },
+                {
+                  "asString": "pg_dependencies"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "5017"
+                },
+                {
+                  "asString": "pg_mcv_list"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "5069"
+                },
+                {
+                  "asString": "xid8"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "600"
+                },
+                {
+                  "asString": "point"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "601"
+                },
+                {
+                  "asString": "lseg"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "602"
+                },
+                {
+                  "asString": "path"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "603"
+                },
+                {
+                  "asString": "box"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "604"
+                },
+                {
+                  "asString": "polygon"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "628"
+                },
+                {
+                  "asString": "line"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "22"
+                },
+                {
+                  "asString": "int2vector"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "701"
+                },
+                {
+                  "asString": "float8"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "705"
+                },
+                {
+                  "asString": "unknown"
+                },
+                {
+                  "asString": "p"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "718"
+                },
+                {
+                  "asString": "circle"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "790"
+                },
+                {
+                  "asString": "money"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "829"
+                },
+                {
+                  "asString": "macaddr"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "869"
+                },
+                {
+                  "asString": "inet"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "650"
+                },
+                {
+                  "asString": "cidr"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "774"
+                },
+                {
+                  "asString": "macaddr8"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1033"
+                },
+                {
+                  "asString": "aclitem"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1042"
+                },
+                {
+                  "asString": "bpchar"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1043"
+                },
+                {
+                  "asString": "varchar"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1082"
+                },
+                {
+                  "asString": "date"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1083"
+                },
+                {
+                  "asString": "time"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1114"
+                },
+                {
+                  "asString": "timestamp"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1184"
+                },
+                {
+                  "asString": "timestamptz"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1186"
+                },
+                {
+                  "asString": "interval"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1266"
+                },
+                {
+                  "asString": "timetz"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1560"
+                },
+                {
+                  "asString": "bit"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1562"
+                },
+                {
+                  "asString": "varbit"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1700"
+                },
+                {
+                  "asString": "numeric"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1790"
+                },
+                {
+                  "asString": "refcursor"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2202"
+                },
+                {
+                  "asString": "regprocedure"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2203"
+                },
+                {
+                  "asString": "regoper"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2204"
+                },
+                {
+                  "asString": "regoperator"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2205"
+                },
+                {
+                  "asString": "regclass"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4191"
+                },
+                {
+                  "asString": "regcollation"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2206"
+                },
+                {
+                  "asString": "regtype"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4096"
+                },
+                {
+                  "asString": "regrole"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4089"
+                },
+                {
+                  "asString": "regnamespace"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2950"
+                },
+                {
+                  "asString": "uuid"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3220"
+                },
+                {
+                  "asString": "pg_lsn"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3614"
+                },
+                {
+                  "asString": "tsvector"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3642"
+                },
+                {
+                  "asString": "gtsvector"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3615"
+                },
+                {
+                  "asString": "tsquery"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3734"
+                },
+                {
+                  "asString": "regconfig"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3769"
+                },
+                {
+                  "asString": "regdictionary"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3802"
+                },
+                {
+                  "asString": "jsonb"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4072"
+                },
+                {
+                  "asString": "jsonpath"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2970"
+                },
+                {
+                  "asString": "txid_snapshot"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "5038"
+                },
+                {
+                  "asString": "pg_snapshot"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2249"
+                },
+                {
+                  "asString": "record"
+                },
+                {
+                  "asString": "p"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "16"
+                },
+                {
+                  "asString": "bool"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "17"
+                },
+                {
+                  "asString": "bytea"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2278"
+                },
+                {
+                  "asString": "void"
+                },
+                {
+                  "asString": "p"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4600"
+                },
+                {
+                  "asString": "pg_brin_bloom_summary"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4601"
+                },
+                {
+                  "asString": "pg_brin_minmax_multi_summary"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "18"
+                },
+                {
+                  "asString": "char"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "19"
+                },
+                {
+                  "asString": "name"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "20"
+                },
+                {
+                  "asString": "int8"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "21"
+                },
+                {
+                  "asString": "int2"
+                },
+                {
+                  "asString": "b"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "isNull": true
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3908"
+                },
+                {
+                  "asString": "tsrange"
+                },
+                {
+                  "asString": "r"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1114"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3904"
+                },
+                {
+                  "asString": "int4range"
+                },
+                {
+                  "asString": "r"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "23"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3906"
+                },
+                {
+                  "asString": "numrange"
+                },
+                {
+                  "asString": "r"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1700"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3912"
+                },
+                {
+                  "asString": "daterange"
+                },
+                {
+                  "asString": "r"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1082"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3926"
+                },
+                {
+                  "asString": "int8range"
+                },
+                {
+                  "asString": "r"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "20"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3910"
+                },
+                {
+                  "asString": "tstzrange"
+                },
+                {
+                  "asString": "r"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1184"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4534"
+                },
+                {
+                  "asString": "tstzmultirange"
+                },
+                {
+                  "asString": "m"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3910"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4535"
+                },
+                {
+                  "asString": "datemultirange"
+                },
+                {
+                  "asString": "m"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3912"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4536"
+                },
+                {
+                  "asString": "int8multirange"
+                },
+                {
+                  "asString": "m"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3926"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4451"
+                },
+                {
+                  "asString": "int4multirange"
+                },
+                {
+                  "asString": "m"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3904"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4532"
+                },
+                {
+                  "asString": "nummultirange"
+                },
+                {
+                  "asString": "m"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3906"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4533"
+                },
+                {
+                  "asString": "tsmultirange"
+                },
+                {
+                  "asString": "m"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3908"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "information_schema"
+                },
+                {
+                  "asString": "13287"
+                },
+                {
+                  "asString": "character_data"
+                },
+                {
+                  "asString": "d"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1043"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "information_schema"
+                },
+                {
+                  "asString": "13284"
+                },
+                {
+                  "asString": "cardinal_number"
+                },
+                {
+                  "asString": "d"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "23"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "information_schema"
+                },
+                {
+                  "asString": "13297"
+                },
+                {
+                  "asString": "yes_or_no"
+                },
+                {
+                  "asString": "d"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1043"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "information_schema"
+                },
+                {
+                  "asString": "13295"
+                },
+                {
+                  "asString": "time_stamp"
+                },
+                {
+                  "asString": "d"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1184"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "information_schema"
+                },
+                {
+                  "asString": "13289"
+                },
+                {
+                  "asString": "sql_identifier"
+                },
+                {
+                  "asString": "d"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "19"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "information_schema"
+                },
+                {
+                  "asString": "13296"
+                },
+                {
+                  "asString": "_yes_or_no"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "13297"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2287"
+                },
+                {
+                  "asString": "_record"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "2249"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1000"
+                },
+                {
+                  "asString": "_bool"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "16"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1001"
+                },
+                {
+                  "asString": "_bytea"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "17"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1002"
+                },
+                {
+                  "asString": "_char"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "18"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1003"
+                },
+                {
+                  "asString": "_name"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "19"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1016"
+                },
+                {
+                  "asString": "_int8"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "20"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1005"
+                },
+                {
+                  "asString": "_int2"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "21"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1006"
+                },
+                {
+                  "asString": "_int2vector"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "22"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1007"
+                },
+                {
+                  "asString": "_int4"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "23"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1008"
+                },
+                {
+                  "asString": "_regproc"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "24"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1009"
+                },
+                {
+                  "asString": "_text"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "25"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1028"
+                },
+                {
+                  "asString": "_oid"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "26"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1010"
+                },
+                {
+                  "asString": "_tid"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "27"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1011"
+                },
+                {
+                  "asString": "_xid"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "28"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1012"
+                },
+                {
+                  "asString": "_cid"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "29"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1013"
+                },
+                {
+                  "asString": "_oidvector"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "30"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "199"
+                },
+                {
+                  "asString": "_json"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "114"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "143"
+                },
+                {
+                  "asString": "_xml"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "142"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "271"
+                },
+                {
+                  "asString": "_xid8"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "5069"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1017"
+                },
+                {
+                  "asString": "_point"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "600"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1018"
+                },
+                {
+                  "asString": "_lseg"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "601"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1019"
+                },
+                {
+                  "asString": "_path"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "602"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1020"
+                },
+                {
+                  "asString": "_box"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "603"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1027"
+                },
+                {
+                  "asString": "_polygon"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "604"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "629"
+                },
+                {
+                  "asString": "_line"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "628"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1021"
+                },
+                {
+                  "asString": "_float4"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "700"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1022"
+                },
+                {
+                  "asString": "_float8"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "701"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "719"
+                },
+                {
+                  "asString": "_circle"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "718"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "791"
+                },
+                {
+                  "asString": "_money"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "790"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1040"
+                },
+                {
+                  "asString": "_macaddr"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "829"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1041"
+                },
+                {
+                  "asString": "_inet"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "869"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "651"
+                },
+                {
+                  "asString": "_cidr"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "650"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "775"
+                },
+                {
+                  "asString": "_macaddr8"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "774"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1034"
+                },
+                {
+                  "asString": "_aclitem"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1033"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1014"
+                },
+                {
+                  "asString": "_bpchar"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1042"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1015"
+                },
+                {
+                  "asString": "_varchar"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1043"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1182"
+                },
+                {
+                  "asString": "_date"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1082"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1183"
+                },
+                {
+                  "asString": "_time"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1083"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1115"
+                },
+                {
+                  "asString": "_timestamp"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1114"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1185"
+                },
+                {
+                  "asString": "_timestamptz"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1184"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1187"
+                },
+                {
+                  "asString": "_interval"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1186"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1270"
+                },
+                {
+                  "asString": "_timetz"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1266"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1561"
+                },
+                {
+                  "asString": "_bit"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1560"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1563"
+                },
+                {
+                  "asString": "_varbit"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1562"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "1231"
+                },
+                {
+                  "asString": "_numeric"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1700"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2201"
+                },
+                {
+                  "asString": "_refcursor"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "1790"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2207"
+                },
+                {
+                  "asString": "_regprocedure"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "2202"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2208"
+                },
+                {
+                  "asString": "_regoper"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "2203"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2209"
+                },
+                {
+                  "asString": "_regoperator"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "2204"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2210"
+                },
+                {
+                  "asString": "_regclass"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "2205"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4192"
+                },
+                {
+                  "asString": "_regcollation"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "4191"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2211"
+                },
+                {
+                  "asString": "_regtype"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "2206"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4097"
+                },
+                {
+                  "asString": "_regrole"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "4096"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4090"
+                },
+                {
+                  "asString": "_regnamespace"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "4089"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2951"
+                },
+                {
+                  "asString": "_uuid"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "2950"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3221"
+                },
+                {
+                  "asString": "_pg_lsn"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3220"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3643"
+                },
+                {
+                  "asString": "_tsvector"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3614"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3644"
+                },
+                {
+                  "asString": "_gtsvector"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3642"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3645"
+                },
+                {
+                  "asString": "_tsquery"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3615"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3735"
+                },
+                {
+                  "asString": "_regconfig"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3734"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3770"
+                },
+                {
+                  "asString": "_regdictionary"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3769"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3807"
+                },
+                {
+                  "asString": "_jsonb"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3802"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "4073"
+                },
+                {
+                  "asString": "_jsonpath"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "4072"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "2949"
+                },
+                {
+                  "asString": "_txid_snapshot"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "2970"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "5039"
+                },
+                {
+                  "asString": "_pg_snapshot"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "5038"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3905"
+                },
+                {
+                  "asString": "_int4range"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3904"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3907"
+                },
+                {
+                  "asString": "_numrange"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3906"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3909"
+                },
+                {
+                  "asString": "_tsrange"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3908"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3911"
+                },
+                {
+                  "asString": "_tstzrange"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3910"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3913"
+                },
+                {
+                  "asString": "_daterange"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3912"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "3927"
+                },
+                {
+                  "asString": "_int8range"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "3926"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "6150"
+                },
+                {
+                  "asString": "_int4multirange"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "4451"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "6151"
+                },
+                {
+                  "asString": "_nummultirange"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "4532"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "6152"
+                },
+                {
+                  "asString": "_tsmultirange"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "4533"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "6153"
+                },
+                {
+                  "asString": "_tstzmultirange"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "4534"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "6155"
+                },
+                {
+                  "asString": "_datemultirange"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "4535"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "pg_catalog"
+                },
+                {
+                  "asString": "6157"
+                },
+                {
+                  "asString": "_int8multirange"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "4536"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "information_schema"
+                },
+                {
+                  "asString": "13283"
+                },
+                {
+                  "asString": "_cardinal_number"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "13284"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "information_schema"
+                },
+                {
+                  "asString": "13286"
+                },
+                {
+                  "asString": "_character_data"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "13287"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "information_schema"
+                },
+                {
+                  "asString": "13288"
+                },
+                {
+                  "asString": "_sql_identifier"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "13289"
+                }
+              ]
+            }
+          },
+          {
+            "dataRow": {
+              "values": [
+                {
+                  "asString": "information_schema"
+                },
+                {
+                  "asString": "13294"
+                },
+                {
+                  "asString": "_time_stamp"
+                },
+                {
+                  "asString": "a"
+                },
+                {
+                  "asString": "f"
+                },
+                {
+                  "asString": "13295"
+                }
+              ]
+            }
+          },
+          {
+            "complete": {
+              "tag": "SELECT 172"
+            }
+          },
+          {
+            "rowDescription": {
+              "fields": [
+                {
+                  "name": "oid",
+                  "tableOid": 1247,
+                  "tableAttributeNumber": 1,
+                  "dataTypeOid": 26,
+                  "dataTypeSize": 4,
+                  "typeModifier": -1
+                },
+                {
+                  "name": "attname",
+                  "tableOid": 1249,
+                  "tableAttributeNumber": 2,
+                  "dataTypeOid": 19,
+                  "dataTypeSize": 64,
+                  "typeModifier": -1
+                },
+                {
+                  "name": "atttypid",
+                  "tableOid": 1249,
+                  "tableAttributeNumber": 3,
+                  "dataTypeOid": 26,
+                  "dataTypeSize": 4,
+                  "typeModifier": -1
+                }
+              ]
+            }
+          },
+          {
+            "complete": {
+              "tag": "SELECT 0"
+            }
+          },
+          {
+            "rowDescription": {
+              "fields": [
+                {
+                  "name": "oid",
+                  "tableOid": 1247,
+                  "tableAttributeNumber": 1,
+                  "dataTypeOid": 26,
+                  "dataTypeSize": 4,
+                  "typeModifier": -1
+                },
+                {
+                  "name": "enumlabel",
+                  "tableOid": 3501,
+                  "tableAttributeNumber": 4,
+                  "dataTypeOid": 19,
+                  "dataTypeSize": 64,
+                  "typeModifier": -1
+                }
+              ]
+            }
+          },
+          {
+            "complete": {
+              "tag": "SELECT 0"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "netinfo": {
+    "id": "1",
+    "startTime": "2026-10-27T14:50:41.635794Z",
+    "downstream": {
+      "ipAddress": "127.0.0.1",
+      "port": 40000
+    },
+    "upstream": {
+      "hostname": "banking-postgres.banking-app.svc.cluster.local",
+      "port": 5432
+    },
+    "direction": "EGRESS"
+  }
+}

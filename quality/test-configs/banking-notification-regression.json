@@ -1,0 +1,96 @@
+{
+  "id": "banking-notification-regression",
+  "generator": {
+    "stages": [
+      {
+        "virtualUsers": {
+          "virtualUsers": "1",
+          "requestDelay": {
+            "mode": "FLAT",
+            "requestDelayFlat": "1s"
+          }
+        }
+      }
+    ],
+    "dlpConfigId": "banking-app-keys",
+    "evaluationIntervals": 5,
+    "lowDataMode": false
+  },
+  "rules": [
+    {
+      "metricName": "passAssertPct",
+      "type": "TOO_LOW",
+      "value": 100,
+      "action": "ALERT"
+    },
+    {
+      "metricName": "failTransactionCount",
+      "type": "TOO_HIGH",
+      "value": 0,
+      "action": "ALERT"
+    },
+    {
+      "metricName": "totalTransactionCount",
+      "type": "TOO_LOW",
+      "value": 25,
+      "action": "ALERT"
+    },
+    {
+      "metricName": "p95",
+      "type": "TOO_HIGH",
+      "value": 2000,
+      "action": "ALERT"
+    }
+  ],
+  "version": 3,
+  "assertionGroups": [
+    {
+      "configs": [
+        {
+          "type": "httpStatusCode"
+        },
+        {
+          "type": "httpResponseBody",
+          "config": {
+            "ignore": "durationMs"
+          }
+        }
+      ]
+    }
+  ],
+  "responder": {
+    "numReplicas": 1,
+    "responseDelay": {
+      "mode": "NONE"
+    },
+    "dlpConfigId": "banking-app-keys",
+    "lowDataMode": false
+  },
+  "cluster": {
+    "cleanup": "inventory",
+    "replayMode": "full-replay",
+    "sidecarTlsOut": true,
+    "logLevel": "info",
+    "logsCollected": true,
+    "generatorResources": {
+      "limits": {
+        "cpu": "1",
+        "memory": "2147483648"
+      },
+      "requests": {
+        "cpu": "100m",
+        "memory": "134217728"
+      }
+    },
+    "responderResources": {
+      "limits": {
+        "cpu": "500m",
+        "memory": "1073741824"
+      },
+      "requests": {
+        "cpu": "100m",
+        "memory": "134217728"
+      }
+    }
+  }
+}

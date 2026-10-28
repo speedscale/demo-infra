@@ -9,8 +9,11 @@ snapshotID: c75078f4-852f-43e5-aedc-efc2a6de9adf
 devSnapshotID: c75078f4-852f-43e5-aedc-efc2a6de9adf
 stagingSnapshotID: c75078f4-852f-43e5-aedc-efc2a6de9adf
 devProxymockSnapshotID: 30546f66-7ea4-4893-be71-af818e568635
-testConfigID: banking-daily-replay
+testConfigID: banking-user-regression
 service: banking-user
 servicePort: 80
 localPort: 18080
 proxymockTarget: http://localhost:18080
+cloudRegressionTransform: banking-user-replay
+cloudRegressionExcludeInbound: banking-user:banking-user:80
+cloudRegressionVerifyJWT: true
