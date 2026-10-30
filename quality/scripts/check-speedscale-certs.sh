@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 # Verifies Speedscale TLS-out trust before replays run.
 #
@@ -13,8 +14,12 @@ set -euo pipefail
 #      reconciles them, so a control-plane CA rotation strands them; a mismatch
 #      makes every mock TLS handshake fail while status-code assertions stay green.
 #
+# Java applications use speedscale-jks separately from the PEM bundle. Both must
+# trust the namespace signing certificate.
+#
 # Usage: check-speedscale-certs.sh <namespace> [<namespace>...]
 # Assumes kubectl already points at the target cluster (connect-cluster.sh).
+# Requires JDK 11+ when a Java truststore exists.
 
 if [ $# -lt 1 ]; then
   echo "Usage: $0 <namespace> [<namespace>...]"
@@ -53,6 +58,17 @@ for ns in "$@"; do
     echo "FAIL: $ns/speedscale-certs has no ca-certificates.crt bundle" >&2
     fail=1
     continue
+  fi
+
+  if kubectl get secret speedscale-jks -n "$ns" >/dev/null 2>&1; then
+    kubectl get secret speedscale-jks -n "$ns" -o jsonpath='{.data.cacerts\.jks}' | base64 -d > "$workdir/$ns.jks" || true
+    if command -v java >/dev/null 2>&1 && java "$(dirname "$0")/JavaTrustCanary.java" "$workdir/$ns.jks" "$workdir/$ns-tls.crt" >/dev/null 2>&1; then
+      echo "OK:   $ns/speedscale-jks trusts its mock signing cert"
+    else
+      echo "FAIL: $ns/speedscale-jks cannot validate the mock signing cert (JDK 11+ is required for this check)." >&2
+      echo "      Repair the namespace Java truststore before running Java TLS replays." >&2
+      fail=1
+    fi
   fi
 
   if openssl verify -CAfile "$workdir/$ns-bundle.crt" "$workdir/$ns-tls.crt" >/dev/null 2>&1; then
