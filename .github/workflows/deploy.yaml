@@ -6,6 +6,11 @@ on:
     paths:
     - 'clusters/**'
 
+# Hold the shared lock through deployment and the reusable quality workflow.
+concurrency:
+  group: demo-cluster-quality
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

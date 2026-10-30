@@ -16,14 +16,11 @@ on:
 permissions:
   contents: read
 
-# One group across ALL trigger types: schedule and workflow_dispatch runs replay
-# against the same clusters and the same workloads, so two concurrent runs
-# interleave TrafficReplays and hang each other (observed 2026-08-28: a stale
-# scheduled run held staging while a dispatched run replayed the same SUTs).
-# Newest run wins; the superseded run is cancelled.
+# Deploy and daily workflows share the same cluster workloads and standing mocks.
+# Finish the active run before another deployment or replay can change them.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: demo-cluster-quality
+  cancel-in-progress: false
 
 jobs:
   validate-scheduled-run:
