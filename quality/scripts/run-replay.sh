@@ -225,6 +225,18 @@ ensure_snapshot_jwt_resign() {
   rm -f "$current" "$updated"
 }
 
+retryable_admission_failure() {
+  jq -e '.report |
+    (.status == "Canceled" or .status == "Cancelled") and
+    ((.tags.operator // "") == "") and
+    all(.lifecycleEvents[]?; .component != "operator") and
+    all(.aggregates[]?; .name != "totalTransactionCount" or (.gaugeVal.val // 0) == 0) and
+    any(.replayEvents[]?;
+      .reason == "FailedToInitTrafficReplay" and
+      (.description | contains("failed to create traffic replay CR") and
+        contains("failed calling webhook") and contains("No agent available")))' "$1" >/dev/null
+}
+
 wait_for_replay() {
   local name=$1 rid=$2
   local timeout_minutes=${REPLAY_TIMEOUT_MINUTES:-30}
@@ -251,6 +263,10 @@ wait_for_replay() {
       info "  $name: $report_status (${elapsed}s elapsed)"
       mkdir -p "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME"
       printf '%s\n' "$report" > "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME/$rid.json"
+      if retryable_admission_failure "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME/$rid.json"; then
+        warn "  $name: Kubernetes admission unavailable before replay creation"
+        return 75
+      fi
       if [ -n "${REPLAY_RELEASE_FILE:-}" ] && [ ! -f "$REPLAY_RELEASE_FILE" ]; then
         report_finished=false
         if jq -e 'any(.report.lifecycleEvents[]?;
@@ -398,63 +414,76 @@ for f in "${replay_files[@]}"; do
   info "Ensuring JWT resign transform on snapshot $snapshot_id"
   ensure_snapshot_jwt_resign "$snapshot_id"
 
-  info "Launching replay: $name (workload=$workload, ns=$namespace, snapshot=$snapshot_id, tag=$build_tag)"
+  replay_passed=false
+  for admission_attempt in 1 2 3; do
+    info "Launching replay: $name (workload=$workload, ns=$namespace, snapshot=$snapshot_id, tag=$build_tag)"
 
-  report_id=""
-  for attempt in 1 2 3; do
-    # MOCK_EXCEPT (optional): keep selected out-services OUT of the mock set so
-    # they hit the real (restored) dependency -- Path B uses 'host:banking-postgres'
-    # so the SUT reads the fixture DB while HTTP deps stay mocked.
-    output=$(speedctl_cmd infra replay \
-      --cluster "$CLUSTER_NAME" \
-      --namespace "$namespace" \
-      --service "$workload" \
-      --snapshot-id "$snapshot_id" \
-      --test-config-id "$test_config_id" \
-      --build-tag "$build_tag" \
-      "${replay_override_args[@]}" \
-      "${regression_args[@]}" \
-      ${MOCK_EXCEPT:+--mock-except $MOCK_EXCEPT} \
-      --id-only 2>&1) || true
+    report_id=""
+    for attempt in 1 2 3; do
+      # MOCK_EXCEPT (optional): keep selected out-services OUT of the mock set so
+      # they hit the real (restored) dependency -- Path B uses 'host:banking-postgres'
+      # so the SUT reads the fixture DB while HTTP deps stay mocked.
+      output=$(speedctl_cmd infra replay \
+        --cluster "$CLUSTER_NAME" \
+        --namespace "$namespace" \
+        --service "$workload" \
+        --snapshot-id "$snapshot_id" \
+        --test-config-id "$test_config_id" \
+        --build-tag "$build_tag" \
+        "${replay_override_args[@]}" \
+        "${regression_args[@]}" \
+        ${MOCK_EXCEPT:+--mock-except $MOCK_EXCEPT} \
+        --id-only 2>&1) || true
 
-    report_id=$(echo "$output" | grep -Eo '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1 || true)
+      report_id=$(echo "$output" | grep -Eo '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1 || true)
 
-    # A failed launch prints an error message that can itself contain UUIDs
-    # (typically the snapshot ID), and polling a UUID that is not a real report
-    # burns the full wait timeout (3 such hangs blew the 90m job budget on
-    # 2026-08-28). Reject output that carries speedctl's error marker or whose
-    # first UUID is just the snapshot ID echoed back.
-    if echo "$output" | grep -q "✘"; then
-      warn "  attempt $attempt: speedctl infra replay failed"
-      warn "  Output: $output"
-      report_id=""
-    elif [ "$report_id" = "$snapshot_id" ]; then
-      warn "  attempt $attempt: launch failed (extracted ID matches snapshot ID)"
-      warn "  Output: $output"
-      report_id=""
+      # A failed launch prints an error message that can itself contain UUIDs
+      # (typically the snapshot ID), and polling a UUID that is not a real report
+      # burns the full wait timeout (3 such hangs blew the 90m job budget on
+      # 2026-08-28). Reject output that carries speedctl's error marker or whose
+      # first UUID is just the snapshot ID echoed back.
+      if echo "$output" | grep -q "✘"; then
+        warn "  attempt $attempt: speedctl infra replay failed"
+        warn "  Output: $output"
+        report_id=""
+      elif [ "$report_id" = "$snapshot_id" ]; then
+        warn "  attempt $attempt: launch failed (extracted ID matches snapshot ID)"
+        warn "  Output: $output"
+        report_id=""
+      fi
+
+      if [ -n "$report_id" ]; then
+        break
+      fi
+      warn "  attempt $attempt: no report ID returned"
+      [ "$attempt" -lt 3 ] && sleep 5
+    done
+
+    if [ -z "$report_id" ]; then
+      error "Failed to start replay for $name"
+      error "Output: $output"
+      exit 1
     fi
 
-    if [ -n "$report_id" ]; then
+    info "  Report ID: $report_id"
+    if [ -n "$CLOUD_LOAD_PROFILE" ]; then
+      printf '%s\n' "$report_id" > "$CLOUD_REPORT_DIR/report-id.txt"
+    fi
+    report_ids["$name"]="$report_id"
+    replay_statuses["$name"]="running"
+
+    if wait_for_replay "$name" "$report_id"; then
+      replay_passed=true
       break
     fi
-    warn "  attempt $attempt: no report ID returned"
-    [ "$attempt" -lt 3 ] && sleep 5
+    if [ "$admission_attempt" -eq 3 ] || ! retryable_admission_failure "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME/$report_id.json"; then
+      break
+    fi
+    warn "  $name: retrying admission after 15s (attempt $((admission_attempt + 1))/3); report $report_id retained"
+    sleep 15
   done
 
-  if [ -z "$report_id" ]; then
-    error "Failed to start replay for $name"
-    error "Output: $output"
-    exit 1
-  fi
-
-  info "  Report ID: $report_id"
-  if [ -n "$CLOUD_LOAD_PROFILE" ]; then
-    printf '%s\n' "$report_id" > "$CLOUD_REPORT_DIR/report-id.txt"
-  fi
-  report_ids["$name"]="$report_id"
-  replay_statuses["$name"]="running"
-
-  if wait_for_replay "$name" "$report_id"; then
+  if [ "$replay_passed" = true ]; then
     if [ -z "$CLOUD_LOAD_PROFILE" ] && ! speedctl_cmd get report errortable "$report_id" > "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME/$report_id-errors.json"; then
       error "  $name: status comparison evidence could not be read"
       printf 'null\n' > "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME/$report_id-errors.json"
