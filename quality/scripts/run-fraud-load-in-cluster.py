@@ -173,7 +173,11 @@ def controller(namespace, snapshot, config, report_file, load_args):
             time.sleep(5)
         log = kubectl(["logs", "job/" + name], retries=6)
         (report_file.parent / "in-cluster.log").write_text(log)
-        result = decode_result(log)
+        try:
+            result = decode_result(log)
+        except ValueError:
+            print("\n".join(log.splitlines()[-30:]), file=sys.stderr)
+            raise
         report_file.write_text(json.dumps(result["report"], indent=2) + "\n")
         print("\n".join(line for line in log.splitlines() if not line.startswith(RESULT_MARKER)), flush=True)
         print("Proxymock report: " + str(report_file), flush=True)
