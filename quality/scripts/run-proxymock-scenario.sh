@@ -113,6 +113,14 @@ prune_file="$REPO_ROOT/quality/proxymock-prune/${name}.patterns"
 info "Connecting to cluster: $CLUSTER_NAME"
 "$SCRIPT_DIR/connect-cluster.sh" "$CLUSTER_NAME"
 
+# Fraud gRPC needs no auth preflight; keep its spike traffic off the API tunnel.
+if [ "$LOAD_PROFILE:$REPLAY_NAME" = fraud-spike:banking-fraud ]; then
+  "$SCRIPT_DIR/check-replay-released.sh" "$namespace" "$service"
+  exec python3 "$SCRIPT_DIR/run-fraud-load-in-cluster.py" \
+    "$namespace" "$snapshot_id" "$SPEEDCTL_HOME/config.yaml" \
+    "$report_dir/${name}.json" "${load_args[@]}"
+fi
+
 info "Pulling snapshot: $snapshot_id"
 # The pull fetches short-lived S3 credentials from the tenant API first; that
 # call has timed out on an otherwise healthy day (banking-ai, 2026-09-07).
