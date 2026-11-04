@@ -17,7 +17,7 @@ class CloudLoadTest(unittest.TestCase):
             quality = root / 'quality'
             scripts = quality / 'scripts'
             scripts.mkdir(parents=True)
-            for name in ('run-replay.sh', 'run-cloud-load.sh', 'check-replay-released.sh', 'validate-cloud-load-report.py', 'validate-replay-snapshot.py'):
+            for name in ('run-replay.sh', 'run-cloud-load.sh', 'check-replay-released.sh', 'describe-replay-release.sh', 'validate-cloud-load-report.py', 'validate-replay-snapshot.py'):
                 shutil.copy(QUALITY / 'scripts' / name, scripts)
             for name in ('connect-cluster.sh', 'check-speedscale-certs.sh'):
                 p = scripts / name
@@ -26,7 +26,21 @@ class CloudLoadTest(unittest.TestCase):
             for name in ('speedctl-replay', 'cloud-load', 'transforms'):
                 shutil.copytree(QUALITY / name, quality / name)
             kubectl = root / 'kubectl'
-            kubectl.write_text('#!/usr/bin/env python3\nimport json, os, sys\nif os.environ[\'BLOCKED\'] == \'true\': print(\'{}\')\nelif \'deployments\' in sys.argv:\n print(json.dumps({\'items\':[{\'metadata\':{\'name\':\'banking-\'+name,\'generation\':1,\'labels\':{}},\'spec\':{\'replicas\':1},\'status\':{\'observedGeneration\':1,\'updatedReplicas\':1,\'readyReplicas\':1,\'replicas\':1}} for name in [\'gateway\',\'fraud\',\'ai\']]}))\nelse: print(\'{"items":[]}\')\n')
+            kubectl.write_text('''#!/usr/bin/env python3
+import json, os, sys
+if os.environ['BLOCKED'] == 'true':
+    print('{}')
+elif 'service' in sys.argv:
+    service = sys.argv[sys.argv.index('service') + 1]
+    port = 80 if service == 'banking-gateway' else 8080
+    print(json.dumps({'spec': {'ports': [{'port': port, 'targetPort': 8080}]}}))
+elif 'deployments' in sys.argv:
+    print(json.dumps({'items': [{'metadata': {'name': 'banking-' + name, 'generation': 1, 'labels': {}},
+        'spec': {'replicas': 1}, 'status': {'observedGeneration': 1, 'updatedReplicas': 1,
+        'readyReplicas': 1, 'replicas': 1}} for name in ['gateway', 'fraud', 'ai']]}))
+else:
+    print('{"items":[]}')
+''')
             kubectl.chmod(0o755)
             cli = root / 'speedctl'
             cli.write_text('''#!/usr/bin/env python3
@@ -85,6 +99,10 @@ else:
             self.assertEqual(args[args.index('--cluster')+1], 'staging-decoy')
             self.assertNotIn('--test-override', args)
             self.assertEqual(args[args.index('--test-config-id')+1], 'banking-cloud-load-'+profile)
+            expected_target = {'gateway-ramp': 'banking-gateway=banking-gateway:80',
+                               'fraud-spike': 'banking-fraud=banking-fraud:8080',
+                               'ai-soak': 'banking-ai=banking-ai:8080'}[profile]
+            self.assertEqual(args[args.index('--test-against')+1], expected_target)
             self.assertNotIn('--no-mocks', args)
             if profile in ('gateway-ramp', 'ai-soak'):
                 expected = {'gateway-ramp': '4f2b0637-f69d-4787-8f11-24cecc812cb2',

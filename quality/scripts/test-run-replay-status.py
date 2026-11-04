@@ -78,6 +78,7 @@ REPLAY_ERROR_GRACE_MINUTES=0
 name=banking-accounts
 namespace=banking-replay
 workload=banking-accounts
+service_target=banking-accounts=banking-accounts:80
 snapshot_id=11111111-1111-1111-1111-111111111111
 test_config_id=fixture
 build_tag=fixture
@@ -90,6 +91,7 @@ error() { :; }
 sleep() { :; }
 speedctl_cmd() {
  if [ "$1" = infra ]; then
+  printf '%s\n' "$@" > "$REPO_ROOT/latest-args"
   n=$(cat "$REPO_ROOT/count" 2>/dev/null || echo 0)
   n=$((n+1)); echo "$n" > "$REPO_ROOT/count"
   printf '00000000-0000-0000-0000-%012d\n' "$n"
@@ -106,6 +108,9 @@ DATA
                 result = subprocess.run(['bash', '-c', setup + helper + '\n' + poll + '\n' + block + '\n[ "$replay_passed" = true ]', 'test', directory], capture_output=True, timeout=10)
                 self.assertEqual(code, result.returncode, result.stderr.decode())
                 self.assertEqual(attempts, int((root / 'count').read_text()))
+                argv = (root / 'latest-args').read_text().splitlines()
+                self.assertEqual(argv[argv.index('--test-against') + 1],
+                                 'banking-accounts=banking-accounts:80')
                 saved = list((root / 'quality/replay-reports/dev-decoy').glob('*.json'))
                 self.assertEqual(attempts, len(saved))
 
