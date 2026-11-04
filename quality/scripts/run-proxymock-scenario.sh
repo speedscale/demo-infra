@@ -208,6 +208,7 @@ if ! kubectl -n "$namespace" rollout status "deployment/$service" --timeout=5m; 
 fi
 port_forward_log="$runner_temp/${name}-port-forward.log"
 start_service_port_forward "$namespace" "$service" "$local_port" "$service_port" "$port_forward_log"
+target_forward_pid=${port_forward_pids[${#port_forward_pids[@]}-1]}
 
 if [ -n "$readiness_path" ]; then
   info "Checking authenticated HTTP readiness for $name"
@@ -227,7 +228,7 @@ info "Replaying proxymock scenario: $name"
 report_file="$report_dir/${name}.json"
 rm -f "$report_file"
 replay_status=0
-proxymock replay \
+bash "$SCRIPT_DIR/run-with-port-forward.sh" "$target_forward_pid" "$port_forward_log" proxymock replay \
   --config "$SPEEDCTL_HOME/config.yaml" \
   --in "$snapshot_dir" \
   --out "$result_dir" \

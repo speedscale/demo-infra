@@ -32,7 +32,7 @@ if [ "$MODE" = failure ] && [ "$3" = gateway-ramp ]; then exit 7; fi
             calls = root / "calls"
             summary = root / "summary.md"
             result = subprocess.run(["bash", str(scripts / "run-daily-load.sh"), "dev-decoy"],
-                                    env=dict(os.environ, MODE=mode, CALLS=str(calls),
+                                    env=dict(os.environ, MODE=mode, CALLS=str(calls), PROXYMOCK_LOAD_PROTECTED="true",
                                              GITHUB_STEP_SUMMARY=str(summary)),
                                     capture_output=True, text=True)
             return result, calls.read_text().splitlines(), summary.read_text()

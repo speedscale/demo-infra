@@ -8,6 +8,11 @@ case "$CLUSTER" in
   *) echo "Usage: $0 <dev-decoy|staging-decoy>" >&2; exit 1 ;;
 esac
 
+if [ "${PROXYMOCK_LOAD_PROTECTED:-false}" != true ]; then
+  "$SCRIPT_DIR/connect-cluster.sh" "$CLUSTER"
+  exec python3 "$SCRIPT_DIR/protect-load-workloads.py" banking-replay bash "$0" "$@"
+fi
+
 report_root="$REPO_ROOT/quality/proxymock-reports/$CLUSTER/load"
 mkdir -p "$report_root"
 summary="$report_root/summary.md"
