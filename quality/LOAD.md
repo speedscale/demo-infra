@@ -2,6 +2,8 @@
 
 The daily suite combines seven CI regression replays, seven CD replays in each cluster, and three load scenarios in each cluster. Dev and staging have independent test chains after mock reset. Dev CD waits for the seven CI replays, which use dev services; staging CD can run alongside dev CI. Each cluster runs CD, Cloud load, then proxymock load. Cloud report analysis overlaps later traffic only after workload restoration is confirmed. Manual workflow dispatch honors the selected cluster.
 
+Cloud regression and load launches pass an explicit `--test-against` mapping from the recorded service name to the `service` and exposed `servicePort` in its replay YAML. Before launching, the runner verifies that Kubernetes actually exposes that port. The recorded container port is not necessarily the Service port: transactions was captured on 8080, while its Service exposes 80. The November 4 dev failure omitted the generated 8080-to-80 URI override and sent traffic to an unexposed Service port, producing request timeouts and proxy 503 responses. Explicit launch targets preserve that destination independently of inferred report settings.
+
 | Scenario | Service | Traffic shape | Duration | p95 ceiling |
 | --- | --- | --- | --- | --- |
 | Gateway ramp | banking-gateway | 1 user for 30s; ramp to 5 over 30s within a 60s stage; ramp to 10 over 30s within a 90s stage; 2 users for 60s | 4 minutes | 1,500 ms |
@@ -77,6 +79,8 @@ The runner checks report status every ten seconds and accepts the operator finis
 One traffic scenario runs at a time in each cluster. Gateway, fraud, and AI still share node capacity and application dependencies, so their load generators do not run together. CI and dev CD also remain ordered because Cloud replay patches the services that CI targets. Dev and staging can run simultaneously because their workloads and cluster capacity are separate. Cloud analysis runs outside these demo clusters and can overlap later tests after the restoration checks pass. Once the final Cloud workload is released, proxymock load runs while remaining Cloud verdicts finish. The job waits for every report and preserves assertion, delivery, mock utilization, latency, and request-timeout gates.
 
 Each scenario's release marker is removed before launch. If restoration is not confirmed, the runner stops launching further traffic and fails. Cloud waits retain the twenty-minute report budget, with up to five additional minutes to confirm restoration after a report concludes; proxymock retains its forty-five-minute orchestration budget and eight-minute per-profile replay limits. The combined load step has a seventy-five-minute limit.
+
+If a restoration check times out, the runner saves `restoration-blockers.json` beside the regression or Cloud reports and prints it in the job log. It contains deployment generation/replica/readiness status, replay ownership, and remaining replay pods with regular and native-sidecar container state. Environment variables and Secret contents are excluded. The stop condition and five-minute restoration budget are unchanged.
 
 ### October 13 runtime validation
 

@@ -155,6 +155,7 @@ info "Found ${#replay_files[@]} replay config(s)"
 # handshake fail while status-code assertions stay green. Fail fast instead.
 declare -A seen_namespaces
 declare -a canary_namespaces
+
 for f in "${replay_files[@]}"; do
   ns=$(awk '$1=="namespace:" {gsub(/["'"'"']/, "", $2); print $2; exit}' "$f")
   if [ -n "$ns" ] && [ -z "${seen_namespaces[$ns]:-}" ]; then
@@ -172,6 +173,24 @@ declare -A replay_statuses
 get_config_value() {
   local file=$1 key=$2
   awk -v k="$key" '$1==k":" {gsub(/["'"'"']/, "", $2); print $2; exit}' "$file"
+}
+
+replay_service_target() {
+  local file=$1 service port namespace name
+  service=$(get_config_value "$file" service)
+  port=$(get_config_value "$file" servicePort)
+  namespace=$(get_config_value "$file" namespace)
+  name=$(get_config_value "$file" name)
+  if [ -z "$service" ] || [ -z "$namespace" ] || [ -z "$name" ] || [[ ! "$port" =~ ^[1-9][0-9]{0,4}$ ]] || [ "$port" -gt 65535 ]; then
+    error "Invalid or missing replay Service target in $file" >&2
+    return 1
+  fi
+  if ! kubectl --request-timeout=10s -n "$namespace" get service "$service" -o json |
+      jq -e --argjson port "$port" 'any(.spec.ports[]?; .port == $port)' >/dev/null; then
+    error "Replay target $namespace/$service does not expose Service port $port" >&2
+    return 1
+  fi
+  printf '%s=%s:%s' "$name" "$service" "$port"
 }
 
 ensure_snapshot_jwt_resign() {
@@ -411,12 +430,13 @@ for f in "${replay_files[@]}"; do
     exit 1
   fi
 
+  service_target=$(replay_service_target "$f")
   info "Ensuring JWT resign transform on snapshot $snapshot_id"
   ensure_snapshot_jwt_resign "$snapshot_id"
 
   replay_passed=false
   for admission_attempt in 1 2 3; do
-    info "Launching replay: $name (workload=$workload, ns=$namespace, snapshot=$snapshot_id, tag=$build_tag)"
+    info "Launching replay: $name (workload=$workload, ns=$namespace, target=$service_target, snapshot=$snapshot_id, tag=$build_tag)"
 
     report_id=""
     for attempt in 1 2 3; do
@@ -427,6 +447,7 @@ for f in "${replay_files[@]}"; do
         --cluster "$CLUSTER_NAME" \
         --namespace "$namespace" \
         --service "$workload" \
+        --test-against "$service_target" \
         --snapshot-id "$snapshot_id" \
         --test-config-id "$test_config_id" \
         --build-tag "$build_tag" \
@@ -523,6 +544,8 @@ for f in "${replay_files[@]}"; do
     while ! "$SCRIPT_DIR/check-replay-released.sh" "$namespace" "$workload"; do
       if [ $(( $(date +%s) - release_start )) -ge "${REPLAY_RELEASE_TIMEOUT_SECONDS:-300}" ]; then
         error "  $name: workload restoration not confirmed; remaining traffic must stop"
+        "$SCRIPT_DIR/describe-replay-release.sh" "$namespace" |
+          tee "$REPO_ROOT/quality/replay-reports/$CLUSTER_NAME/restoration-blockers.json" || true
         replay_statuses["$name"]="failed"
         release_confirmed=false
         break

@@ -24,6 +24,7 @@ release_start=$(date +%s)
 while ! "$SCRIPT_DIR/check-replay-released.sh" banking-replay banking-gateway; do
   if [ $(( $(date +%s) - release_start )) -ge "${REPLAY_RELEASE_TIMEOUT_SECONDS:-300}" ]; then
     echo 'Cloud load stopped: previous replay workloads have not been restored.' >&2
+    "$SCRIPT_DIR/describe-replay-release.sh" banking-replay | tee "$root/restoration-blockers.json" || true
     exit 1
   fi
   sleep "${REPLAY_RELEASE_CHECK_INTERVAL:-5}"
