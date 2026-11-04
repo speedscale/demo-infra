@@ -56,7 +56,8 @@ elif a[:2] == ['get','test-config']:
     print((Path(os.environ['CFG_DIR'])/(profile+'.json')).read_text())
 elif a[:2] == ['get','snapshot']:
     config=json.loads((Path(os.environ['CFG_DIR']).parent/'transforms/banking-jwt-resign.json').read_text())
-    print(json.dumps({'status':'Complete','tokenConfigId':'banking-jwt-resign','tokenizerConfig':config,'outTraffic':[]}))
+    print(json.dumps({'status':'Complete','tokenConfigId':'banking-jwt-resign','tokenizerConfig':config,'outTraffic':[],
+        'inTraffic':{f'banking-{name}:banking-{name}:8080':{} for name in ['gateway','fraud','ai']}}))
 elif a[:3] == ['get','report','latencytable']:
     print(json.dumps({'total':{'count':100,'p95':20}}))
 elif a[:2] == ['get','report']:
@@ -99,10 +100,11 @@ else:
             self.assertEqual(args[args.index('--cluster')+1], 'staging-decoy')
             self.assertNotIn('--test-override', args)
             self.assertEqual(args[args.index('--test-config-id')+1], 'banking-cloud-load-'+profile)
-            expected_target = {'gateway-ramp': 'banking-gateway=banking-gateway:80',
-                               'fraud-spike': 'banking-fraud=banking-fraud:8080',
-                               'ai-soak': 'banking-ai=banking-ai:8080'}[profile]
-            self.assertEqual(args[args.index('--test-against')+1], expected_target)
+            service = 'banking-' + profile.split('-')[0]
+            port = 80 if profile == 'gateway-ramp' else 8080
+            self.assertEqual(args[args.index('--route')+1],
+                             f'{service}:{service}:8080=http://{service}:{port}')
+            self.assertNotIn('--test-against', args)
             self.assertNotIn('--no-mocks', args)
             if profile in ('gateway-ramp', 'ai-soak'):
                 expected = {'gateway-ramp': '4f2b0637-f69d-4787-8f11-24cecc812cb2',

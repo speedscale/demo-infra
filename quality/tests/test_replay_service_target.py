@@ -10,7 +10,7 @@ import unittest
 QUALITY = Path(__file__).resolve().parents[1]
 SOURCE = (QUALITY / 'scripts/run-replay.sh').read_text()
 HELPERS = '\n'.join(re.search(r'^' + name + r'\(\) \{.*?^\}', SOURCE, re.M | re.S).group()
-                    for name in ['get_config_value', 'replay_service_target'])
+                    for name in ['get_config_value', 'replay_service_target', 'replay_service_routes'])
 
 
 class ReplayServiceTargetTest(unittest.TestCase):
@@ -50,6 +50,28 @@ kubectl() {
             with self.subTest(port=port):
                 self.assertNotEqual(self.target('banking-transactions', port).returncode, 0)
         self.assertNotEqual(self.target('banking-transactions', 80, api_error=True).returncode, 0)
+
+    def test_routes_use_exact_keys_and_omit_excluded_user_entry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / 'user.yaml'
+            config.write_text('name: banking-user\n')
+            shell = '''set -euo pipefail
+speedctl_cmd() { printf '%s' "$SNAPSHOT_JSON"; }
+'''
+            snapshot = {'inTraffic': {'banking-user:banking-user:80': {},
+                                      'banking-user:banking-user:8080': {},
+                                      'another:another:8080': {}}}
+            command = '\nreplay_service_routes "$1" fixture banking-user=banking-user:80 banking-user:banking-user:80'
+            result = subprocess.run(['bash', '-c', shell + HELPERS + command, 'test', str(config)],
+                                    capture_output=True, text=True,
+                                    env=dict(os.environ, SNAPSHOT_JSON=json.dumps(snapshot)))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, 'banking-user:banking-user:8080=http://banking-user:80\n')
+            snapshot['inTraffic'] = {}
+            result = subprocess.run(['bash', '-c', shell + HELPERS + command, 'test', str(config)],
+                                    capture_output=True, text=True,
+                                    env=dict(os.environ, SNAPSHOT_JSON=json.dumps(snapshot)))
+            self.assertNotEqual(result.returncode, 0)
 
 
 if __name__ == '__main__':

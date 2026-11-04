@@ -193,6 +193,19 @@ replay_service_target() {
   printf '%s=%s:%s' "$name" "$service" "$port"
 }
 
+replay_service_routes() {
+  local file=$1 snapshot_id=$2 target=$3 excluded=${4:-} snapshot keys key name
+  name=$(get_config_value "$file" name)
+  snapshot=$(speedctl_cmd get snapshot "$snapshot_id") || return 1
+  keys=$(jq -er --arg name "$name" --arg excluded "$excluded" '
+    [.inTraffic | keys[] | select(startswith($name + ":") and . != $excluded)]
+    | if length == 0 then error("no replay inbound service keys") else .[] end
+  ' <<< "$snapshot") || return 1
+  while IFS= read -r key; do
+    printf '%s=http://%s\n' "$key" "${target#*=}"
+  done <<< "$keys"
+}
+
 ensure_snapshot_jwt_resign() {
   local snapshot_id=$1
   local current snapshot_file updated
@@ -433,6 +446,9 @@ for f in "${replay_files[@]}"; do
   service_target=$(replay_service_target "$f")
   info "Ensuring JWT resign transform on snapshot $snapshot_id"
   ensure_snapshot_jwt_resign "$snapshot_id"
+  route_lines=$(replay_service_routes "$f" "$snapshot_id" "$service_target" "${regression_exclude_in:-}")
+  route_args=()
+  while IFS= read -r route; do route_args+=(--route "$route"); done <<< "$route_lines"
 
   replay_passed=false
   for admission_attempt in 1 2 3; do
@@ -447,7 +463,7 @@ for f in "${replay_files[@]}"; do
         --cluster "$CLUSTER_NAME" \
         --namespace "$namespace" \
         --service "$workload" \
-        --test-against "$service_target" \
+        "${route_args[@]}" \
         --snapshot-id "$snapshot_id" \
         --test-config-id "$test_config_id" \
         --build-tag "$build_tag" \
