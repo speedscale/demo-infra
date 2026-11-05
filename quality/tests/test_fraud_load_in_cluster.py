@@ -23,6 +23,8 @@ class FraudLoadTest(unittest.TestCase):
         env = {e["name"]: e["value"] for e in pod["containers"][0]["env"]}
         self.assertEqual(env["LOAD_TARGET"], "banking-fraud.banking-replay.svc.cluster.local:8080")
         self.assertFalse(pod["automountServiceAccountToken"])
+        self.assertEqual(job["spec"]["template"]["metadata"]["annotations"][
+            "cluster-autoscaler.kubernetes.io/safe-to-evict"], "false")
         self.assertEqual(job["spec"]["backoffLimit"], 0)
         self.assertEqual(json.loads(env["LOAD_ARGS"]), ["--stage", "vus=20,for=30s"])
 

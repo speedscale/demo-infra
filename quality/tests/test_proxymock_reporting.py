@@ -27,6 +27,10 @@ class ReportingTest(unittest.TestCase):
             setup = r'''
 set -euo pipefail
 name=banking-fraud
+SCRIPT_DIR="$SCRIPT_TEST_DIR"
+target_forward_pid=$$
+port_forward_log="$TEST_ROOT/forward.log"
+touch "$port_forward_log"
 load_args=()
 SPEEDCTL_HOME="$TEST_ROOT"
 snapshot_dir="$TEST_ROOT/snapshot"
@@ -61,10 +65,12 @@ proxymock() {
   fi
   echo "$PAYLOAD" > "$out"
 }
+export -f proxymock
 '''
             env = dict(os.environ, TEST_ROOT=tmp, FAILURES=str(failures),
                        FAILURE_MODE=failure_mode, PAYLOAD=json.dumps(payload),
-                       REPLAY_STATUS=str(replay_status))
+                       REPLAY_STATUS=str(replay_status), SCRIPT_TEST_DIR=str(SCRIPT.parent),
+                       PROXYMOCK_FORWARD_CHECK_INTERVAL="0.01")
             result = subprocess.run(["bash", "-c", setup + STAGE], env=env,
                                     capture_output=True, text=True)
             count_file = root / "attempts"

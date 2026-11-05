@@ -106,7 +106,8 @@ def job_spec(name, namespace, snapshot, load_args):
         "apiVersion": "batch/v1", "kind": "Job",
         "metadata": {"name": name, "namespace": namespace},
         "spec": {"backoffLimit": 0, "activeDeadlineSeconds": 1200, "ttlSecondsAfterFinished": 600,
-                 "template": {"spec": {
+                 "template": {"metadata": {"annotations": {
+                     "cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}}, "spec": {
                      "restartPolicy": "Never", "automountServiceAccountToken": False,
                      "securityContext": {"runAsUser": 65532, "runAsGroup": 65532, "fsGroup": 65532},
                      "volumes": [
