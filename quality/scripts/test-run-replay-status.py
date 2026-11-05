@@ -79,6 +79,7 @@ name=banking-accounts
 namespace=banking-replay
 workload=banking-accounts
 service_target=banking-accounts=banking-accounts:80
+route_args=(--route banking-accounts:banking-accounts:8080=http://banking-accounts:80)
 snapshot_id=11111111-1111-1111-1111-111111111111
 test_config_id=fixture
 build_tag=fixture
@@ -109,8 +110,8 @@ DATA
                 self.assertEqual(code, result.returncode, result.stderr.decode())
                 self.assertEqual(attempts, int((root / 'count').read_text()))
                 argv = (root / 'latest-args').read_text().splitlines()
-                self.assertEqual(argv[argv.index('--test-against') + 1],
-                                 'banking-accounts=banking-accounts:80')
+                self.assertEqual(argv[argv.index('--route') + 1],
+                                 'banking-accounts:banking-accounts:8080=http://banking-accounts:80')
                 saved = list((root / 'quality/replay-reports/dev-decoy').glob('*.json'))
                 self.assertEqual(attempts, len(saved))
 
