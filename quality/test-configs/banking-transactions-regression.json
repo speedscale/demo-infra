@@ -134,5 +134,17 @@
         "memory": "134217728"
       }
     }
+  },
+  "readiness": {
+    "families": [
+      {
+        "family": "READINESS_FAMILY_SECURITY",
+        "role": "READINESS_ROLE_BLOCKS_BELOW",
+        "floor": "READINESS_LETTER_C"
+      }
+    ],
+    "securityProbe": {
+      "enabled": true
+    }
   }
 }
