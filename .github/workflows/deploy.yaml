@@ -74,11 +74,29 @@ jobs:
           kubectl apply -f clusters/${{ matrix.cluster }}/istio-config/
         fi
 
-    - name: Verify sync started
+    - name: Wait for the deployed operator
+      env:
+        CLUSTER_NAME: ${{ matrix.cluster }}
       run: |
-        sleep 10
-        kubectl get applications -n argocd \
-          -o custom-columns=NAME:.metadata.name,SYNC:.status.sync.status,HEALTH:.status.health.status
+        version="$(awk '$1 == "targetRevision:" { print $2 }' "clusters/$CLUSTER_NAME/argocd/speedscale-operator.yaml")"
+        test -n "$version"
+
+        kubectl -n argocd wait application/demo-infra-apps \
+          --for="jsonpath={.status.sync.revision}=$GITHUB_SHA" --timeout=10m
+        kubectl -n argocd wait application/speedscale-operator \
+          --for="jsonpath={.status.sync.revision}=$version" --timeout=10m
+        kubectl -n argocd wait application/speedscale-operator \
+          --for='jsonpath={.status.sync.status}=Synced' --timeout=5m
+
+        for component in operator inspector forwarder; do
+          deployment="deployment/speedscale-$component"
+          kubectl -n speedscale wait "$deployment" \
+            --for="jsonpath={.spec.template.spec.containers[0].image}=gcr.io/speedscale/$component:v$version" --timeout=5m
+          kubectl -n speedscale rollout status "$deployment" --timeout=5m
+        done
+        kubectl -n speedscale wait daemonset/speedscale-nettap \
+          --for="jsonpath={.spec.template.spec.containers[?(@.name==\"speedscale-nettap-ingest\")].image}=gcr.io/speedscale/goproxy:v$version" --timeout=5m
+        kubectl -n speedscale rollout status daemonset/speedscale-nettap --timeout=5m
 
   trigger-quality:
     needs: deploy
