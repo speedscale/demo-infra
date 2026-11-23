@@ -22,10 +22,10 @@ spec:
           patch: |-
             - op: add
               path: /metadata/annotations/sidecar.speedscale.com~1tag
-              value: v2.5.1418
+              value: v2.5.1437
             - op: add
               path: /spec/template/metadata/annotations/sidecar.speedscale.com~1tag
-              value: v2.5.1418
+              value: v2.5.1437
         - target:
             kind: ConfigMap
             name: banking-user-config
