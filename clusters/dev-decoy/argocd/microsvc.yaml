@@ -22,12 +22,12 @@ spec:
             metadata:
               name: banking-gateway
               annotations:
-                capture.speedscale.com/java-agent-tag: v0.1.106
+                capture.speedscale.com/java-agent-tag: v0.1.109
             spec:
               template:
                 metadata:
                   annotations:
-                    capture.speedscale.com/java-agent-tag: v0.1.106
+                    capture.speedscale.com/java-agent-tag: v0.1.109
         - target:
             kind: Deployment
             name: banking-accounts
@@ -37,13 +37,13 @@ spec:
             metadata:
               name: banking-accounts
               annotations:
-                capture.speedscale.com/java-agent-tag: v0.1.106
+                capture.speedscale.com/java-agent-tag: v0.1.109
                 capture.speedscale.com/ignore-ports: ""
             spec:
               template:
                 metadata:
                   annotations:
-                    capture.speedscale.com/java-agent-tag: v0.1.106
+                    capture.speedscale.com/java-agent-tag: v0.1.109
                     capture.speedscale.com/ignore-ports: ""
         - target:
             kind: Deployment
@@ -54,13 +54,13 @@ spec:
             metadata:
               name: banking-transactions
               annotations:
-                capture.speedscale.com/java-agent-tag: v0.1.106
+                capture.speedscale.com/java-agent-tag: v0.1.109
                 capture.speedscale.com/ignore-ports: ""
             spec:
               template:
                 metadata:
                   annotations:
-                    capture.speedscale.com/java-agent-tag: v0.1.106
+                    capture.speedscale.com/java-agent-tag: v0.1.109
                     capture.speedscale.com/ignore-ports: ""
         - target:
             kind: Deployment
